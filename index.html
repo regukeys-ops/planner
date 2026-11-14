@@ -360,6 +360,7 @@ textarea{min-height:80px;resize:vertical}
   <div class="tog"><span>Bedtime notification<br><span class="meta">30 min before bedtime</span></span><input type="checkbox" id="stBedRem"></div>
   <div class="tog"><span>Family is in Saudi<br><span class="meta">Turns on daily family time and suggests it each evening</span></span><input type="checkbox" id="stFam"></div>
   <div class="tog"><span>Connection<br><span class="meta" id="connInfo"></span></span><button type="button" class="btn sm" id="openConn">Change</button></div>
+  <div class="hint" style="margin-top:12px">App version 7 · 15 Nov 2026</div>
   <div class="row" style="margin-top:16px;justify-content:flex-end"><button type="button" class="btn" data-close>Cancel</button><button class="btn p">Save</button></div>
 </form></div>
 
@@ -858,7 +859,8 @@ render();syncLabel();if(CFG.url)load();else setTimeout(openConn,400);
 setInterval(load,60000);setInterval(()=>{render();checkRem()},30000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)load()});
 window.addEventListener("online",load);window.addEventListener("offline",()=>syncLabel(false));
-if("serviceWorker" in navigator&&window.isSecureContext)navigator.serviceWorker.register("sw.js").catch(()=>{});
+if("serviceWorker" in navigator&&window.isSecureContext){navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{r.update();document.addEventListener("visibilitychange",()=>{if(!document.hidden)r.update()})}).catch(()=>{});
+  let reloaded=false;if(navigator.serviceWorker.controller)navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!reloaded){reloaded=true;location.reload()}})}
 }
 </script>
 </body>
