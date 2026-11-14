@@ -145,7 +145,8 @@ textarea{min-height:80px;resize:vertical}
 .toast.on{display:block;animation:fade .25s ease}
 .mic{width:64px;height:64px;border-radius:50%;border:0;background:var(--red);color:#fff;display:grid;place-items:center;cursor:pointer;flex:none;box-shadow:0 6px 18px rgba(228,0,43,.35)}
 .mic svg{width:28px;height:28px}
-.mic.on{animation:pulse 1.2s ease-in-out infinite}
+.mic.on{animation:pulse 1.2s ease-in-out infinite;background:#111418}
+.mic.on svg{display:none}.mic.on::after{content:"";width:20px;height:20px;border-radius:4px;background:#e4002b}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(228,0,43,.5)}50%{box-shadow:0 0 0 14px rgba(228,0,43,0)}}
 .voice{display:flex;gap:14px;align-items:center;margin:8px 0 10px}
 .offline{background:color-mix(in srgb,var(--leave) 18%,var(--card));color:var(--ink);border-radius:10px;padding:6px 10px;display:inline-block}
@@ -588,7 +589,7 @@ function renderSleep(){
 
 /* ---------- Sheets / forms ---------- */
 const open=id=>{$(id).classList.add("on")};const close=id=>$(id).classList.remove("on");
-document.querySelectorAll(".ov").forEach(o=>o.addEventListener("click",e=>{if(e.target===o||e.target.closest("[data-close]"))o.classList.remove("on")}));
+document.querySelectorAll(".ov").forEach(o=>o.addEventListener("click",e=>{if(e.target===o||e.target.closest("[data-close]")){o.classList.remove("on");if(o.id==="ovPlan"&&typeof stopMic==="function"&&listening)stopMic()}}));
 function toast(msg,ms=5000){const t=$("toast");t.innerHTML=msg;t.classList.add("on");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),ms)}
 $("toast").addEventListener("click",()=>$("toast").classList.remove("on"));
 async function save(name,obj,ovId){try{const id=await api("saveRow",name,obj);if(ovId)close(ovId);return id}catch(e){toast("Couldn't save: "+esc(e.message||e))}}
@@ -697,20 +698,44 @@ $("fConn").addEventListener("submit",async e=>{e.preventDefault();const u=$("cUr
 $("openConn").addEventListener("click",openConn);
 
 /* ---------- Voice → Claude ---------- */
-const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec=null,listening=false,baseText="";
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+// iPhone Home Screen apps don't get results from the browser's speech recogniser, so there we use the keyboard's dictation mic instead.
+const IOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+const IOS_APP=IOS&&(navigator.standalone===true||matchMedia("(display-mode: standalone)").matches);
+const useSR=!!SR&&!IOS_APP;
+let rec=null,listening=false,baseText="",gotResult=false,watch=null,maxT=null;
 try{const l=ls("micLang");if(l)$("micLang").value=l}catch(e){}
 $("micLang").addEventListener("change",()=>ls("micLang",$("micLang").value));
-function micUI(on,msg){listening=on;$("micBtn").classList.toggle("on",on);$("micSt").textContent=msg||(on?"Listening… tap to stop":"Tap the mic and speak")}
-function startMic(){
-  if(!SR){$("micHint").textContent="Voice typing isn't available here. Tap the text box, then the 🎤 on your iPhone keyboard to dictate.";$("planIn").focus();return}
-  if(listening){rec&&rec.stop();return}
-  rec=new SR();rec.lang=$("micLang").value;rec.continuous=true;rec.interimResults=true;
-  baseText=$("planIn").value.trim();if(baseText)baseText+=" ";
-  rec.onresult=ev=>{let fin="",int="";for(let i=0;i<ev.results.length;i++){const t=ev.results[i][0].transcript;if(ev.results[i].isFinal)fin+=t+" ";else int+=t}$("planIn").value=(baseText+fin+int).trim()};
-  rec.onerror=ev=>{micUI(false);$("micHint").textContent=ev.error==="not-allowed"||ev.error==="service-not-allowed"?"Microphone blocked. Allow it in Settings → Safari → Microphone, or use the 🎤 on your keyboard.":ev.error==="no-speech"?"Didn't catch anything — try again.":"Voice stopped ("+ev.error+"). You can also use the 🎤 on your keyboard."};
-  rec.onend=()=>micUI(false,$("planIn").value?"Got it — check the text, then send":"");
-  try{rec.start();micUI(true);$("micHint").textContent=""}catch(e){micUI(false)}
+if(!useSR){$("micLang").style.display="none";$("micSt").textContent=IOS?"Tap, then use the 🎤 on your keyboard":"Tap, then dictate with your keyboard"}
+function micUI(on,msg){listening=on;$("micBtn").classList.toggle("on",on);$("micBtn").setAttribute("aria-label",on?"Stop":"Start speaking");$("micSt").textContent=msg||(on?"Listening… tap the mic again to stop":useSR?"Tap the mic and speak":"Tap, then use the 🎤 on your keyboard")}
+function keyboardDictation(){
+  const t=$("planIn");t.focus();const n=t.value.length;try{t.setSelectionRange(n,n)}catch(e){}
+  $("micHint").innerHTML='Your keyboard is open — tap the <strong>🎤 microphone at the bottom-right of the keyboard</strong> and speak. Tap it again (or the keyboard) when you\'re done.';
 }
+function stopMic(msg){
+  clearTimeout(watch);clearTimeout(maxT);
+  const r=rec;rec=null;if(r){try{r.stop()}catch(e){}setTimeout(()=>{try{r.abort()}catch(e){}},1200)}
+  micUI(false,msg);
+}
+function startMic(){
+  if(listening){stopMic($("planIn").value?"Got it — check the text, then send":"");return}
+  if(!useSR){keyboardDictation();return}
+  const me=new SR();rec=me;me.lang=$("micLang").value;me.continuous=true;me.interimResults=true;gotResult=false;
+  baseText=$("planIn").value.trim();if(baseText)baseText+=" ";
+  me.onresult=ev=>{if(rec!==me)return;let fin="",int="";for(let i=0;i<ev.results.length;i++){const t=ev.results[i][0].transcript;if(ev.results[i].isFinal)fin+=t+" ";else int+=t}
+    const txt=(fin+int).trim();if(!txt)return;gotResult=true;$("planIn").value=(baseText+txt).trim()};
+  me.onerror=ev=>{if(rec!==me)return;const e=ev.error;stopMic();if(e==="aborted")return;
+    $("micHint").textContent=e==="not-allowed"||e==="service-not-allowed"?"Microphone isn't allowed here. Use the 🎤 on your keyboard instead.":e==="no-speech"?"Didn't hear anything — try again, or use the 🎤 on your keyboard.":"Voice stopped. You can use the 🎤 on your keyboard instead."};
+  me.onend=()=>{if(rec===me&&listening)stopMic($("planIn").value?"Got it — check the text, then send":"")};
+  try{me.start();micUI(true);$("micHint").textContent=""}catch(e){stopMic();keyboardDictation();return}
+  // If nothing comes through in 8 s, fall back to keyboard dictation; never listen longer than 2 min.
+  watch=setTimeout(()=>{if(listening&&!gotResult){stopMic();keyboardDictation()}},8000);
+  maxT=setTimeout(()=>{if(listening)stopMic("Stopped after 2 minutes — check the text, then send")},120000);
+}
+// Typing always wins: if you start typing, listening stops so nothing overwrites your text.
+$("planIn").addEventListener("input",()=>{if(listening)stopMic("Stopped listening — you're typing")});
+$("planIn").addEventListener("focus",()=>{if(listening)stopMic("Stopped listening — you're typing")});
+document.querySelectorAll("#ovPlan [data-close]").forEach(b=>b.addEventListener("click",()=>{if(listening)stopMic()}));
 $("micBtn").addEventListener("click",startMic);
 function claudePrompt(){
   const t=today(),ws=weekStart(t),s=S();
