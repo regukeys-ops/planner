@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Regu's Planner</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Planner">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d0f12" media="(prefers-color-scheme: dark)">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..800&display=swap" rel="stylesheet">
+<script>try{var t=localStorage.getItem("theme");if(t&&t!=="auto")document.documentElement.dataset.theme=t}catch(e){}</script>
+<style>
+/*
+VOICE: a friendly, punctual day-planner for a busy offshore project engineer.
+IDEA: a ship's day log / departure board: the day drawn as one timeline bar, habits as gauges.
+PICTURE: today's timeline (sleep, office, activities, now-line) and progress rings for habits.
+COLOUR and TYPE: white or deep night ground, ink text; category colours (work blue, family orange, habits own colours), signal red for urgent. Archivo.
+LAYOUT: header with status, scrolling cards, tab bar fixed at the bottom, + button above it.
+*/
+:root{color-scheme:light dark;--bg:light-dark(#f6f7f9,#0d0f12);--card:light-dark(#fff,#171a1f);--ink:light-dark(#111418,#eef0f3);--mut:light-dark(#68707c,#9aa3ae);--line:light-dark(#e4e7eb,#272b32);--soft:light-dark(#eef1f4,#20242b);--red:#e4002b;--work:#2563eb;--personal:#0ea5a4;--family:#ef6c3a;--leave:#f97316;--offshore:#0891b2;--off:light-dark(#d9dde3,#353a43);--ok:#12a150}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font-family:Archivo,system-ui,sans-serif}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Archivo,system-ui,sans-serif;overflow-x:clip}
+.wrap{max-width:900px;margin:0 auto;padding:0 max(4vw,14px) calc(140px + env(safe-area-inset-bottom))}
+header.top{padding:calc(14px + env(safe-area-inset-top)) 0 4px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+h1{font-size:clamp(28px,6vw,40px);line-height:1.05;margin:2px 0 0;font-weight:800;font-stretch:112%}
+.hi{font-size:14px;color:var(--mut)}
+.iconbtn{width:44px;height:44px;border-radius:12px;border:0;background:var(--card);color:var(--ink);display:grid;place-items:center;cursor:pointer;flex:none}
+.iconbtn svg{width:22px;height:22px}
+.sync{font-size:12px;color:var(--mut);margin:2px 0 10px}
+.card{background:var(--card);border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.card h2{font-size:18px;font-weight:800;font-stretch:108%;margin:0 0 10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card h2 small{font-size:13px;font-weight:500;color:var(--mut)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:4px 10px;border-radius:20px;background:var(--soft);white-space:nowrap}
+.pill i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.status{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.office{font-size:22px;font-weight:800;font-stretch:110%}
+.fig{position:relative;height:96px;margin-top:12px}.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--mut);margin-top:6px}
+.legend span{display:inline-flex;align-items:center;gap:5px}.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.nowrow{display:flex;gap:12px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--soft);margin-top:8px}
+.nowrow b{font-size:12px;min-width:38px;color:var(--mut);text-transform:none}
+.nowrow.hot{background:color-mix(in srgb,var(--red) 14%,var(--card))}.nowrow.hot b{color:var(--red)}
+.sched{list-style:none;margin:0;padding:0}
+.sched li{display:grid;grid-template-columns:78px 1fr auto;gap:12px;padding:12px 0;border-top:1px solid var(--line);align-items:start;cursor:pointer}
+.sched li:first-child{border-top:0}
+.sched .t{font-size:22px;font-weight:800;font-stretch:110%;line-height:1;white-space:nowrap}
+.sched .t small{display:block;font-size:12px;font-weight:500;color:var(--mut);margin-top:4px}
+.sched li.past{opacity:.45}.sched li.cur .t{color:var(--red)}
+.bar{width:4px;border-radius:2px;align-self:stretch}
+.ttl{font-weight:600}.meta{font-size:13px;color:var(--mut)}
+.tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:20px;color:#fff;margin-right:6px;white-space:nowrap}
+.empty{color:var(--mut);padding:16px;border:1.5px dashed var(--line);border-radius:12px;text-align:center;font-size:15px}
+.chips{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
+.hchip{flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;width:84px;padding:10px 4px;border-radius:14px;background:var(--soft);border:0;color:var(--ink);font:600 13px Archivo,system-ui,sans-serif;cursor:pointer;position:relative}
+.hchip.done{background:color-mix(in srgb,var(--c) 18%,var(--card))}
+.hchip .tick{position:absolute;top:6px;right:8px;color:var(--c);font-size:14px}
+.mx{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.q{border-radius:16px;padding:12px;min-height:150px;background:var(--card);border-top:6px solid var(--qc)}
+.q h3{margin:0;font-size:16px;font-weight:800;font-stretch:110%;color:var(--qc)}
+.q .qd{font-size:12px;color:var(--mut);margin-bottom:6px}
+.tcard{display:flex;gap:10px;align-items:flex-start;padding:10px;background:var(--soft);border-radius:12px;margin-top:8px}
+.tcard .body{flex:1;cursor:pointer}.tcard.done .ttl{text-decoration:line-through;color:var(--mut)}
+.chk{width:24px;height:24px;accent-color:var(--ok);margin-top:2px;flex:none}
+.over{color:var(--red);font-weight:600}
+.qbar{display:flex;height:10px;border-radius:6px;overflow:hidden;margin:6px 0 4px;background:var(--soft)}
+.btn{font:600 15px Archivo,system-ui,sans-serif;min-height:44px;padding:10px 16px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.btn.p{background:var(--ink);color:var(--bg);border-color:var(--ink)}.btn.r{background:var(--red);border-color:var(--red);color:#fff}
+.btn.sm{min-height:36px;padding:6px 12px;font-size:14px}
+.btn:disabled{opacity:.5}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--work);outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{display:inline-flex;background:var(--soft);border-radius:12px;padding:3px;gap:2px}
+.seg button{border:0;background:none;color:var(--mut);font:600 14px Archivo,system-ui,sans-serif;padding:8px 14px;min-height:38px;border-radius:9px;cursor:pointer}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+nav.tabs button{border:0;background:none;color:var(--mut);font:600 11px Archivo,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;min-height:52px;cursor:pointer}
+nav.tabs svg{width:24px;height:24px}
+nav.tabs button.on{color:var(--work)}
+.fab{position:fixed;right:max(4vw,16px);bottom:calc(84px + env(safe-area-inset-bottom));z-index:11;width:58px;height:58px;border-radius:50%;border:0;background:var(--red);color:#fff;font-size:32px;line-height:1;box-shadow:0 8px 24px rgba(228,0,43,.4);cursor:pointer}
+.view{display:none}.view.on{display:block;animation:fade .2s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:20;align-items:flex-end;justify-content:center}
+.ov.on{display:flex}
+.sheet{background:var(--card);width:min(560px,100%);max-height:90vh;overflow:auto;border-radius:20px 20px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));animation:up .22s ease}
+@keyframes up{from{transform:translateY(40px);opacity:.5}}
+@media(min-width:700px){.ov{align-items:center}.sheet{border-radius:20px}}
+.sheet h2{margin:0 0 6px;font-size:22px;font-weight:800;font-stretch:110%}
+label{display:block;font-size:13px;font-weight:600;margin:12px 0 4px}
+input,select,textarea{width:100%;font:16px Archivo,system-ui,sans-serif;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);min-height:44px}
+textarea{min-height:80px;resize:vertical}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.qpick{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.qpick button{font:600 14px Archivo,system-ui,sans-serif;text-align:left;padding:10px;min-height:56px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;position:relative}
+.qpick button.sel{border-color:var(--qc);background:color-mix(in srgb,var(--qc) 16%,var(--card))}
+.qpick button.sug::after{content:"Suggested";position:absolute;top:-9px;right:8px;font-size:11px;background:var(--red);color:#fff;padding:1px 6px;border-radius:10px}
+.hint{font-size:13px;color:var(--mut);margin-top:6px}
+.menu{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:10px}
+.menu button{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:14px;border-radius:14px;border:0;background:var(--soft);color:var(--ink);font:600 15px Archivo,system-ui,sans-serif;cursor:pointer;text-align:left}
+.menu .ic{font-size:22px}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal .dh{font-size:12px;color:var(--mut);text-align:center;font-weight:600;padding:4px 0}
+.cal .c{min-height:62px;border-radius:10px;padding:5px;background:var(--card);border:0;color:var(--ink);font:600 14px Archivo,system-ui,sans-serif;text-align:left;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between}
+.cal .c.out{opacity:.35}.cal .c.off{background:var(--off)}
+.cal .c.leave{background:color-mix(in srgb,var(--leave) 28%,var(--card))}
+.cal .c.offshore{background:color-mix(in srgb,var(--offshore) 26%,var(--card))}
+.cal .c.today{outline:2.5px solid var(--red);outline-offset:-2px}
+.dots{display:flex;gap:3px;flex-wrap:wrap}.dots i{width:6px;height:6px;border-radius:50%}
+.wkday{border-top:1px solid var(--line);padding:10px 0}
+.wkday h4{margin:0 0 4px;font-size:15px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.hcard{background:var(--soft);border-radius:14px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;cursor:pointer}
+.week7{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;width:100%}
+.week7 button{height:26px;border-radius:7px;border:0;background:var(--line);font:600 10px Archivo,system-ui,sans-serif;color:var(--mut);cursor:pointer;padding:0}
+.week7 button.on{background:var(--c);color:#fff}
+.week7 button.plan{box-shadow:inset 0 0 0 2px var(--c)}
+.plan7{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.plan7 .col{background:var(--soft);border-radius:10px;padding:6px 4px;min-height:120px}
+.plan7 .col.off{background:var(--off)}.plan7 .col.leave{background:color-mix(in srgb,var(--leave) 25%,var(--card))}
+.plan7 h5{margin:0 0 4px;font-size:11px;text-align:center;color:var(--mut)}
+.pchip{display:block;width:100%;overflow-wrap:anywhere;border:0;border-radius:7px;padding:4px;margin-top:4px;font:600 10.5px/1.2 Archivo,system-ui,sans-serif;color:#fff;background:var(--c);cursor:pointer;text-align:left}
+.pchip.no{background:transparent;color:var(--mut);box-shadow:inset 0 0 0 1.5px var(--c);text-decoration:line-through}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.stat{background:var(--soft);border-radius:14px;padding:12px}
+.stat b{display:block;font-size:26px;font-weight:800;font-stretch:110%;line-height:1.1}
+.stat span{font-size:12px;color:var(--mut)}
+.sbars{display:flex;gap:5px;height:150px;position:relative;margin-top:14px}
+.sbars .b{flex:1;display:flex;flex-direction:column;align-items:center;height:100%}
+.sbars .bw{height:130px;width:100%;display:flex;align-items:flex-end;justify-content:center}
+.sbars .b i{width:100%;max-width:26px;border-radius:6px 6px 3px 3px;background:#6b5bd6;display:block;transition:height .4s}
+.sbars .b i.low{background:var(--leave)}
+.sbars .b span{font-size:10px;color:var(--mut);line-height:20px}
+.target{position:absolute;left:0;right:0;border-top:2px dashed var(--ok);font-size:10px;color:var(--ok)}
+.stars button{border:0;background:none;font-size:28px;cursor:pointer;color:var(--line);padding:0 2px}.stars button.on{color:#f5b301}
+.sw{display:flex;gap:8px;flex-wrap:wrap}.sw button{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer}.sw button.on{border-color:var(--ink)}
+.tog{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.tog input{width:48px;height:28px;min-height:28px;accent-color:var(--ok)}
+.toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translateX(-50%);width:min(520px,92vw);background:var(--ink);color:var(--bg);border-radius:14px;padding:14px 16px;z-index:30;display:none;box-shadow:0 8px 30px rgba(0,0,0,.3)}
+.toast.on{display:block;animation:fade .25s ease}
+.mic{width:64px;height:64px;border-radius:50%;border:0;background:var(--red);color:#fff;display:grid;place-items:center;cursor:pointer;flex:none;box-shadow:0 6px 18px rgba(228,0,43,.35)}
+.mic svg{width:28px;height:28px}
+.mic.on{animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(228,0,43,.5)}50%{box-shadow:0 0 0 14px rgba(228,0,43,0)}}
+.voice{display:flex;gap:14px;align-items:center;margin:8px 0 10px}
+.offline{background:color-mix(in srgb,var(--leave) 18%,var(--card));color:var(--ink);border-radius:10px;padding:6px 10px;display:inline-block}
+@media(prefers-reduced-motion:reduce){.mic.on{animation:none}}
+@media(prefers-reduced-motion:reduce){.view.on,.sheet,.toast.on{animation:none}}
+@media(max-width:600px){.mx{grid-template-columns:minmax(0,1fr)}.sched li{grid-template-columns:66px 1fr auto}.sched .t{font-size:19px}.cal .c{min-height:52px;font-size:13px}.stat b{font-size:22px}}
+</style>
+</head>
+<body>
+<div class="toast" id="toast" role="alert"></div>
+<div class="wrap">
+<header class="top">
+  <div><div class="hi" id="greet">Hello Regu</div><h1 id="hd">Today</h1></div>
+  <button class="iconbtn" id="openSet" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+</header>
+<div class="sync" id="sync">Loading your planner…</div>
+
+<!-- TODAY -->
+<section class="view on" id="v-today">
+  <div class="card">
+    <div class="status"><span class="pill" id="dayPill"></span><span class="meta" id="officeNote"></span></div>
+    <div class="office" id="officeHrs" style="margin-top:8px"></div>
+    <div class="row" id="arriveRow" style="margin-top:8px"></div>
+    <div class="fig" id="tlFig"><svg id="tl" role="img" aria-label="Today's timeline"></svg></div>
+    <div class="legend"><span><i style="background:#6b5bd6"></i>Sleep</span><span><i style="background:var(--work)"></i>Office</span><span><i style="background:var(--personal)"></i>Personal</span><span><i style="background:var(--family)"></i>Family</span><span><i style="background:var(--ok)"></i>Habits</span></div>
+    <div id="now"></div>
+  </div>
+  <div class="card"><h2>Habits today <small id="habSum"></small></h2><div class="chips" id="todayHabits"></div></div>
+  <div class="card"><h2>Schedule <button class="btn sm" data-act="event">+ Add</button></h2><ul class="sched" id="todaySched"></ul></div>
+  <div class="card"><h2>Urgent & due <small>tap to edit</small></h2><div id="todayTasks"></div></div>
+  <div class="card" id="sleepMini"></div>
+  <div class="card"><h2>Plan with Claude</h2><div class="voice"><button class="mic" data-act="voice" aria-label="Speak your plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5"/></svg></button><p class="meta" style="margin:0">Tap and say what's coming up this week. Claude fits it around your office hours, off days and habits, then updates your planner.</p></div><button class="btn" data-act="plan">Type instead</button></div>
+</section>
+
+<!-- TASKS -->
+<section class="view" id="v-tasks">
+  <div class="card">
+    <h2>Priority matrix <small id="taskCount"></small></h2>
+    <div class="qbar" id="qbar"></div>
+    <div class="row" style="margin-top:10px">
+      <div class="seg" id="fType"><button data-v="" class="on">All</button><button data-v="work">Official</button><button data-v="personal">Personal</button><button data-v="family">Family</button></div>
+      <label class="row" style="margin:0;font-weight:500"><input type="checkbox" id="fDone" style="width:20px;min-height:20px"> Show done</label>
+    </div>
+  </div>
+  <div class="mx" id="mx"></div>
+</section>
+
+<!-- CALENDAR -->
+<section class="view" id="v-cal">
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <div class="seg" id="calMode"><button data-v="month" class="on">Month</button><button data-v="week">Week</button></div>
+      <div class="row"><button class="btn sm" id="cPrev" aria-label="Previous">‹</button><button class="btn sm" id="cNow">Today</button><button class="btn sm" id="cNext" aria-label="Next">›</button></div>
+    </div>
+    <h2 id="calTitle" style="margin:14px 0 8px"></h2>
+    <div id="calBody"></div>
+    <div class="legend" style="margin-top:10px"><span><i style="background:var(--off)"></i>Off (Fri, 2nd & 4th Sat)</span><span><i style="background:var(--leave)"></i>India leave</span><span><i style="background:var(--offshore)"></i>Offshore</span></div>
+  </div>
+  <div class="card">
+    <h2>Leave & offshore</h2>
+    <div class="row"><button class="btn" data-act="period" data-kind="leave">✈ India leave</button><button class="btn" data-act="period" data-kind="offshore">⚓ Offshore trip</button></div>
+    <div id="periodList" style="margin-top:10px"></div>
+  </div>
+</section>
+
+<!-- HABITS -->
+<section class="view" id="v-habits">
+  <div class="card">
+    <h2>This week <small id="wkHab"></small></h2>
+    <div class="hgrid" id="habGrid"></div>
+    <div class="row" style="margin-top:12px"><button class="btn" data-act="habit">+ Add activity</button></div>
+  </div>
+  <div class="card">
+    <h2>Fit them into my week</h2>
+    <p class="meta" style="margin:0 0 10px">Finds free slots around office hours, off days and what's already scheduled. Tap a suggestion to skip it, then add.</p>
+    <div class="row"><div class="seg" id="planWk"><button data-v="0" class="on">This week</button><button data-v="1">Next week</button></div><button class="btn p" id="suggestBtn">Suggest times</button></div>
+    <div id="planBox" style="margin-top:12px"></div>
+  </div>
+</section>
+
+<!-- SLEEP -->
+<section class="view" id="v-sleep">
+  <div class="card">
+    <h2>Sleep <button class="btn sm p" data-act="sleep">+ Log sleep</button></h2>
+    <div class="stats" id="sleepStats"></div>
+    <div class="sbars" id="sleepBars"></div>
+  </div>
+  <div class="card"><h2>Recent nights</h2><div id="sleepList"></div></div>
+</section>
+</div>
+
+<button class="fab" id="fab" aria-label="Add">+</button>
+<nav class="tabs" id="tabs">
+  <button data-v="today" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Today</button>
+  <button data-v="tasks"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/></svg>Tasks</button>
+  <button data-v="cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4.5" width="18" height="16.5" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>Calendar</button>
+  <button data-v="habits"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 9 9" stroke-width="3.5"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>Habits</button>
+  <button data-v="sleep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>Sleep</button>
+</nav>
+
+<!-- Add menu -->
+<div class="ov" id="ovMenu"><div class="sheet"><h2>Add</h2><div class="menu">
+  <button data-act="task"><span class="ic">✅</span>Task</button>
+  <button data-act="event"><span class="ic">🗓️</span>Schedule item</button>
+  <button data-act="habit"><span class="ic">🎯</span>Habit / activity</button>
+  <button data-act="sleep"><span class="ic">🌙</span>Log sleep</button>
+  <button data-act="period" data-kind="leave"><span class="ic">✈️</span>India leave</button>
+  <button data-act="period" data-kind="offshore"><span class="ic">⚓</span>Offshore trip</button>
+</div><div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn" data-close>Close</button></div></div></div>
+
+<!-- Task form -->
+<div class="ov" id="ovT"><form class="sheet" id="fT">
+  <h2 id="fTh">New task</h2>
+  <label for="tTitle">Task</label><input id="tTitle" required autocomplete="off">
+  <label for="tNotes">Notes</label><textarea id="tNotes" style="min-height:56px"></textarea>
+  <div class="two">
+    <div><label for="tType">Type</label><select id="tType"><option value="work">Official</option><option value="personal">Personal</option><option value="family">Family</option></select></div>
+    <div><label for="tDue">Due</label><input type="datetime-local" id="tDue"></div>
+  </div>
+  <label for="tRem">Remind me at</label><input type="datetime-local" id="tRem">
+  <div class="hint">Leave blank: you'll be notified 15 min before the due time, and again if it's still not done.</div>
+  <label>Category — you choose</label>
+  <div class="qpick" id="qpick"></div>
+  <div class="row" style="margin-top:8px"><span class="hint" id="sugWhy" style="flex:1"></span><button type="button" class="btn sm" id="askQ">Ask Claude</button></div>
+  <div class="row" style="margin-top:16px;justify-content:space-between"><button type="button" class="btn" id="tDel">Delete</button><div class="row"><button type="button" class="btn" data-close>Cancel</button><button class="btn p">Save</button></div></div>
+</form></div>
+
+<!-- Event form -->
+<div class="ov" id="ovE"><form class="sheet" id="fE">
+  <h2 id="fEh">New schedule item</h2>
+  <label for="eTitle">Activity</label><input id="eTitle" required autocomplete="off">
+  <div class="two">
+    <div><label for="eDate">Date</label><input type="date" id="eDate" required></div>
+    <div><label for="eType">Type</label><select id="eType"><option value="work">Official</option><option value="personal">Personal</option><option value="family">Family</option></select></div>
+  </div>
+  <div class="two">
+    <div><label for="eStart">Start</label><input type="time" id="eStart" required></div>
+    <div><label for="eEnd">End</label><input type="time" id="eEnd"></div>
+  </div>
+  <label for="eRem">Notification</label>
+  <select id="eRem"><option value="-1">None</option><option value="0">At start time</option><option value="10">10 min before</option><option value="15">15 min before</option><option value="30">30 min before</option><option value="60">1 hour before</option></select>
+  <label for="eNotes">Notes</label><textarea id="eNotes" style="min-height:56px"></textarea>
+  <div class="row" style="margin-top:16px;justify-content:space-between"><button type="button" class="btn" id="eDel">Delete</button><div class="row"><button type="button" class="btn" data-close>Cancel</button><button class="btn p">Save</button></div></div>
+</form></div>
+
+<!-- Habit form -->
+<div class="ov" id="ovH"><form class="sheet" id="fH">
+  <h2 id="fHh">New activity</h2>
+  <label for="hName">Activity</label><input id="hName" required autocomplete="off" placeholder="e.g. Reading, Swimming, Family time">
+  <div class="two">
+    <div><label for="hPer">Times per week</label><select id="hPer"></select></div>
+    <div><label for="hDur">Minutes each time</label><select id="hDur"></select></div>
+  </div>
+  <label>Preferred time</label>
+  <div class="seg" id="hPref"><button type="button" data-v="morning">Morning</button><button type="button" data-v="evening">Evening</button><button type="button" data-v="any">Any</button></div>
+  <label>Colour</label><div class="sw" id="hCol"></div>
+  <div class="tog"><span>Active</span><input type="checkbox" id="hAct" checked></div>
+  <div class="row" style="margin-top:16px;justify-content:space-between"><button type="button" class="btn" id="hDel">Delete</button><div class="row"><button type="button" class="btn" data-close>Cancel</button><button class="btn p">Save</button></div></div>
+</form></div>
+
+<!-- Sleep form -->
+<div class="ov" id="ovS"><form class="sheet" id="fS">
+  <h2>Log sleep</h2>
+  <label for="sDate">Morning of</label><input type="date" id="sDate" required>
+  <div class="two">
+    <div><label for="sBed">Went to bed</label><input type="time" id="sBed" required></div>
+    <div><label for="sWake">Woke up</label><input type="time" id="sWake" required></div>
+  </div>
+  <div class="hint" id="sHours"></div>
+  <label>How rested do you feel?</label><div class="stars" id="sQ"></div>
+  <label for="sNotes">Notes</label><input id="sNotes" autocomplete="off" placeholder="optional">
+  <div class="row" style="margin-top:16px;justify-content:space-between"><button type="button" class="btn" id="sDel">Delete</button><div class="row"><button type="button" class="btn" data-close>Cancel</button><button class="btn p">Save</button></div></div>
+</form></div>
+
+<!-- Period form -->
+<div class="ov" id="ovP"><form class="sheet" id="fP">
+  <h2 id="fPh">India leave</h2>
+  <div class="seg" id="pKind"><button type="button" data-v="leave">✈ India leave</button><button type="button" data-v="offshore">⚓ Offshore</button></div>
+  <div class="hint" id="pHint"></div>
+  <div class="two"><div><label for="pStart">From</label><input type="date" id="pStart" required></div><div><label for="pEnd">To</label><input type="date" id="pEnd" required></div></div>
+  <label for="pNotes">Notes</label><input id="pNotes" autocomplete="off" placeholder="e.g. flight SV 762, vessel name">
+  <div class="row" style="margin-top:16px;justify-content:space-between"><button type="button" class="btn" id="pDel">Delete</button><div class="row"><button type="button" class="btn" data-close>Cancel</button><button class="btn p">Save</button></div></div>
+</form></div>
+
+<!-- Day detail -->
+<div class="ov" id="ovD"><div class="sheet" id="dayBox"></div></div>
+
+<!-- Settings -->
+<div class="ov" id="ovSet"><form class="sheet" id="fSet">
+  <h2>Settings</h2>
+  <label>Theme</label><div class="seg" id="themeSeg"><button type="button" data-v="auto">Auto</button><button type="button" data-v="light">Light</button><button type="button" data-v="dark">Dark</button></div>
+  <div class="two"><div><label for="stStart">Office start</label><input type="time" id="stStart"></div><div><label for="stHours">Hours at office</label><input type="number" id="stHours" min="4" max="14" step="0.5"></div></div>
+  <div class="hint">Reach late and your leaving time moves later by the same amount (e.g. in at 9:00 → out at 6:00).</div>
+  <div class="two"><div><label for="stWake">Usual wake-up</label><input type="time" id="stWake"></div><div><label for="stBed">Usual bedtime</label><input type="time" id="stBed"></div></div>
+  <label for="stTarget">Sleep target (hours)</label><input type="number" id="stTarget" min="5" max="10" step="0.5">
+  <div class="tog"><span>Bedtime notification<br><span class="meta">30 min before bedtime</span></span><input type="checkbox" id="stBedRem"></div>
+  <div class="tog"><span>Family is in Saudi<br><span class="meta">Turns on daily family time and suggests it each evening</span></span><input type="checkbox" id="stFam"></div>
+  <div class="tog"><span>Connection<br><span class="meta" id="connInfo"></span></span><button type="button" class="btn sm" id="openConn">Change</button></div>
+  <div class="row" style="margin-top:16px;justify-content:flex-end"><button type="button" class="btn" data-close>Cancel</button><button class="btn p">Save</button></div>
+</form></div>
+
+<!-- Plan with Claude -->
+<div class="ov" id="ovPlan"><div class="sheet">
+  <h2>Plan with Claude</h2>
+  <div class="voice"><button class="mic" id="micBtn" type="button" aria-label="Start speaking"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5"/></svg></button>
+    <div style="flex:1"><div class="ttl" id="micSt">Tap the mic and speak</div><select id="micLang" style="margin-top:6px;min-height:38px;padding:6px 10px"><option value="en-IN">English (India)</option><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option><option value="ta-IN">Tamil</option><option value="hi-IN">Hindi</option></select></div></div>
+  <textarea id="planIn" rows="6" placeholder="e.g. Monday 9am CRPO 160 progress meeting for an hour. Submit TBE by Wednesday noon. Doctor Tuesday 6pm. Call home Thursday 9pm. Going offshore from the 24th for a week."></textarea>
+  <div class="hint" id="micHint"></div>
+  <div class="row" style="margin-top:10px"><button class="btn r" id="sendClaude">Send to Claude</button><button class="btn" id="copyClaude">Copy</button><button class="btn" id="planGo" style="display:none">Plan here</button><button class="btn" data-close>Close</button></div>
+  <div class="meta" id="planSt" style="margin-top:8px">Opens your Claude app with your words plus this week's office hours, off days and schedule. Press send there; Claude updates your planner and it syncs here within a minute.</div>
+  <div id="planOut"></div>
+</div></div>
+
+<!-- Connect -->
+<div class="ov" id="ovConn"><form class="sheet" id="fConn">
+  <h2>Connect your planner</h2>
+  <p class="meta" style="margin-top:0">One-time setup on this phone. Paste the Web app link from Apps Script and the passcode shown in its Execution log.</p>
+  <label for="cUrl">Apps Script Web app link</label><input id="cUrl" type="url" required placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">
+  <label for="cPass">Passcode</label><input id="cPass" required autocomplete="off" autocapitalize="off">
+  <div class="hint" id="cMsg"></div>
+  <div class="row" style="margin-top:16px;justify-content:flex-end"><button type="button" class="btn" data-close>Later</button><button class="btn p">Connect</button></div>
+</form></div>
+
+<script>
+{
+/* ================= CORE (pure logic) ================= */
+const D={tasks:[],events:[],habits:[],habitLog:[],sleep:[],periods:[],days:[],settings:{}};
+const DEF={workStart:"08:00",workHours:"9",wake:"05:30",bedtime:"22:30",sleepTarget:"7.5",bedRemind:"off",family:"off",theme:"auto"};
+const S=()=>Object.assign({},DEF,D.settings);
+const pad=n=>String(n).padStart(2,"0");
+const ymd=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const pd=s=>{const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)};
+const addD=(s,n)=>{const d=pd(s);d.setDate(d.getDate()+n);return ymd(d)};
+const toMin=s=>{if(!s)return null;const[h,m]=String(s).split(":").map(Number);return h*60+(m||0)};
+const fromMin=m=>pad(Math.floor(m/60)%24)+":"+pad(m%60);
+const weekStart=s=>{const d=pd(s);return addD(s,-d.getDay())};
+function periodOn(ds){const l=D.periods.filter(p=>p.start<=ds&&ds<=p.end);return l.find(p=>p.kind==="leave")||l[0]||null}
+function dayInfo(ds){
+  const p=periodOn(ds),d=pd(ds),dow=d.getDay();
+  if(p&&p.kind==="leave")return{kind:"leave",work:false,label:"India leave",color:"var(--leave)"};
+  if(p&&p.kind==="offshore")return{kind:"offshore",work:true,label:"Offshore",color:"var(--offshore)"};
+  if(dow===5)return{kind:"off",work:false,label:"Friday off",color:"var(--mut)"};
+  if(dow===6){const n=Math.ceil(d.getDate()/7);if(n===2||n===4)return{kind:"off",work:false,label:(n===2?"2nd":"4th")+" Saturday off",color:"var(--mut)"};return{kind:"work",work:true,label:"Working Saturday",color:"var(--work)"}}
+  return{kind:"work",work:true,label:"Working day",color:"var(--work)"};
+}
+function office(ds){const s=S(),day=D.days.find(x=>x.date===ds),a=toMin(day&&day.arrive||s.workStart);return{a,l:a+Math.round(Number(s.workHours||9)*60),late:!!(day&&day.arrive&&toMin(day.arrive)>toMin(s.workStart))}}
+const eventsOn=ds=>D.events.filter(e=>e.date===ds).sort((a,b)=>(a.start||"").localeCompare(b.start||""));
+const evEnd=e=>e.end?toMin(e.end):toMin(e.start)+60;
+function busyOn(ds,extra){const b=[],i=dayInfo(ds);if(i.work){const o=office(ds);b.push([o.a-30,o.l+30])}eventsOn(ds).forEach(e=>{if(e.start)b.push([toMin(e.start),evEnd(e)])});(extra||[]).forEach(x=>{if(x.ds===ds)b.push([x.s,x.e])});return b}
+function windowsFor(ds,pref){
+  const s=S(),i=dayInfo(ds),wake=toMin(s.wake),bed=toMin(s.bedtime)<300?toMin(s.bedtime)+1440:toMin(s.bedtime);let m,e;
+  if(i.work){const o=office(ds);m=[wake+15,o.a-45];e=[o.l+45,bed-30]}else{m=[wake+60,12*60];e=[16*60,bed-30]}
+  return pref==="morning"?[m]:pref==="evening"?[e]:[e,m];
+}
+function findSlot(ds,dur,pref,extra,minStart){
+  const busy=busyOn(ds,extra);
+  for(const[w0,w1] of windowsFor(ds,pref)){for(let t=Math.ceil(Math.max(w0,minStart||0)/15)*15;t+dur<=w1;t+=15){if(!busy.some(([a,b])=>t<b&&a<t+dur))return t}}
+  return null;
+}
+function suggestWeek(ws,today,nowMinutes){
+  const days=[...Array(7)].map((_,i)=>addD(ws,i)),out=[];
+  const cand=days.filter(ds=>dayInfo(ds).kind!=="leave"&&ds>=today);
+  D.habits.filter(h=>h.active).forEach((h,hi)=>{
+    const has=ds=>D.events.some(e=>e.habit===h.id&&e.date===ds)||out.some(x=>x.habit===h.id&&x.ds===ds);
+    const already=days.filter(ds=>D.events.some(e=>e.habit===h.id&&e.date===ds)).length;
+    const need=Math.max(0,h.perWeek-already),pool=cand.filter(ds=>!has(ds));
+    if(!need||!pool.length)return;
+    const n=Math.min(need,pool.length),step=pool.length/n,used=new Set();
+    for(let k=0;k<n;k++){
+      const base=Math.floor(k*step+(hi%2?step/2:0))%pool.length;
+      for(let j=0;j<pool.length;j++){
+        const idx=(base+(j%2?Math.ceil(j/2):-Math.ceil(j/2))+pool.length*2)%pool.length,ds=pool[idx];
+        if(used.has(ds))continue;
+        const t=findSlot(ds,h.duration,h.pref,out,ds===today?nowMinutes+15:0);
+        if(t!==null){used.add(ds);out.push({habit:h.id,name:h.name,color:h.color,ds,s:t,e:t+h.duration,on:true});break}
+      }
+    }
+  });
+  return out.sort((a,b)=>a.ds.localeCompare(b.ds)||a.s-b.s);
+}
+function sleepHours(r){const b=toMin(r.bed),w=toMin(r.wake);if(b===null||w===null)return null;return((w-b+1440)%1440)/60}
+const Q={UI:["Do now","Urgent & important","#e4002b"],NUI:["Schedule","Important, not urgent","#2563eb"],UNI:["Quick / delegate","Urgent, not important","#f59e0b"],NUNI:["Drop / later","Neither","#8a94a3"]};
+const QK=["UI","NUI","UNI","NUNI"];
+function suggest(title,notes,due){
+  const s=(title+" "+notes).toLowerCase();let u=false,i=true,why=[];
+  if(due){const h=(new Date(due)-Date.now())/36e5;if(h<48){u=true;why.push("due within 2 days")}}
+  if(/\b(urgent|asap|today|tonight|immediately|now|deadline|overdue|tomorrow|eod|by noon|critical)\b/.test(s)){u=true;why.push("urgent wording")}
+  if(/\b(client|aramco|crpo|submit|submission|review|approval|approve|tbe|procedure|report|method statement|ncr|audit|safety|family|daughter|wife|health|doctor|hospital|bill|pay|payment|rent|loan|emi|school|interview|visa|iqama|exam|tax|insurance|invest)\b/.test(s)){i=true;why.push("affects work, money or family")}
+  else if(/\b(reply|forward|print|book|schedule a|call back|courier|routine|admin|errand|grocer|shopping|follow up|chase|remind)\b/.test(s)){i=false;why.push("routine / can be handed off")}
+  if(/\b(youtube|netflix|tv|scroll|browse|game|social media|instagram|someday|maybe)\b/.test(s)){i=false;why.push("low value")}
+  return{q:u&&i?"UI":!u&&i?"NUI":u?"UNI":"NUNI",why:why.length?why.join(", "):"no deadline or urgent cue found"};
+}
+/* END CORE */
+
+/* ================= UI ================= */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+/* ---------- Data layer: works offline, syncs when online ---------- */
+const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}};
+const CFG={url:ls("apiUrl")||"",pass:ls("apiPass")||""};
+const COLL={Tasks:"tasks",Events:"events",Habits:"habits",HabitLog:"habitLog",Sleep:"sleep",Periods:"periods",Days:"days"};
+let queue=[];try{queue=JSON.parse(ls("queue")||"[]")}catch(e){}
+const uuid=()=>(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2));
+function persist(){ls("queue",JSON.stringify(queue));ls("cache",JSON.stringify(D))}
+function applyLocal(fn,args){
+  if(fn==="deleteRow"){const k=COLL[args[0]];if(k)D[k]=D[k].filter(x=>x.id!==args[1]);return}
+  const name=args[0],list=fn==="saveRow"?[args[1]]:args[1];
+  list.forEach(o=>{if(!o.id)o.id=uuid();if(name==="Settings"){D.settings[o.id]=o.value;return}
+    const arr=D[COLL[name]],i=arr.findIndex(x=>x.id===o.id);if(i>=0)arr[i]=Object.assign({},arr[i],o);else arr.push(Object.assign({},o))});
+  return fn==="saveRow"?list[0].id:list.map(o=>o.id);
+}
+class ServerError extends Error{}
+async function remote(fn,args){
+  if(!CFG.url)throw new Error("Not connected");
+  let r;try{r=await fetch(CFG.url,{method:"POST",body:JSON.stringify({pass:CFG.pass,fn,args})})}catch(e){throw new Error("offline")}
+  let j;try{j=await r.json()}catch(e){throw new ServerError("The link didn't return planner data. Check the Web app link and that access is set to Anyone.")}
+  if(!j.ok)throw new ServerError(j.error||"Server error");return j.data;
+}
+async function api(fn,...args){
+  if(fn==="getAll"||fn==="askClaude")return remote(fn,args);
+  const res=applyLocal(fn,args);queue.push({fn,args});persist();render();flush();return res;
+}
+let flushing=false;
+async function flush(){
+  if(flushing||!queue.length||!CFG.url)return;flushing=true;
+  try{while(queue.length){try{await remote(queue[0].fn,queue[0].args)}catch(e){if(e instanceof ServerError){toast("A change couldn't be saved: "+esc(e.message));}else throw e}queue.shift();persist()}}catch(e){}
+  flushing=false;syncLabel();
+}
+function syncLabel(online){
+  const el=$("sync");if(!CFG.url){el.innerHTML='<button class="btn sm" id="connNow">Connect your planner</button>';return}
+  if(queue.length)el.innerHTML=`<span class="offline">Offline · ${queue.length} change${queue.length>1?"s":""} waiting to sync</span>`;
+  else if(online===false)el.innerHTML='<span class="offline">Offline · showing saved data</span>';
+  else el.textContent="Synced "+new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+}
+const fmtT=s=>{if(s===null||s===undefined||s==="")return"";const m=typeof s==="number"?s:toMin(s);const h=Math.floor(m/60)%24,mm=m%60;return(h%12||12)+":"+pad(mm)+(h<12?" am":" pm")};
+const dayName=(ds,o)=>pd(ds).toLocaleDateString(undefined,o||{weekday:"short",day:"numeric",month:"short"});
+const fmtDT=s=>{if(!s)return"";const d=new Date(s);if(isNaN(d))return"";const t=today(),k=ymd(d);return(k===t?"Today":k===addD(t,1)?"Tomorrow":dayName(k))+" "+fmtT(pad(d.getHours())+":"+pad(d.getMinutes()))};
+const today=()=>ymd(new Date());
+const nowMin=()=>{const d=new Date();return d.getHours()*60+d.getMinutes()};
+const TC={work:"var(--work)",personal:"var(--personal)",family:"var(--family)"};
+const TL={work:"Official",personal:"Personal",family:"Family"};
+const evColor=e=>{if(e.habit){const h=D.habits.find(x=>x.id===e.habit);if(h)return h.color}return TC[e.type]||TC.personal};
+const tag=t=>`<span class="tag" style="background:${TC[t]||TC.personal}">${TL[t]||"Personal"}</span>`;
+const isOver=t=>t.due&&!t.done&&new Date(t.due)<new Date();
+let ready=false,aiOn=false,calMode="month",calRef=today(),fType="",editT=null,editE=null,editH=null,editS=null,editP=null,selQ=null,sugQ=null,planDraft=null,placements=[],planOff=0,hPref="evening",hColor="#12a150",sQual=0,pKind="leave";
+
+function ring(p,color,size,label){const r=(size-8)/2,c=2*Math.PI*r,v=Math.max(0,Math.min(1,p));return`<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--line)" stroke-width="7"/>${v>0?`<circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${c*v} ${c}" transform="rotate(-90 ${size/2} ${size/2})" style="transition:stroke-dasharray .5s"/>`:""}<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-size="${size/4.2}" font-weight="800" fill="var(--ink)" font-family="Archivo,system-ui,sans-serif">${esc(label)}</text></svg>`}
+const logged=(hid,ds)=>D.habitLog.find(l=>l.habit===hid&&l.date===ds);
+const weekCount=(hid,ws)=>D.habitLog.filter(l=>l.habit===hid&&l.date>=ws&&l.date<=addD(ws,6)).length;
+
+function render(){
+  const t=today(),info=dayInfo(t),s=S(),h=new Date().getHours();
+  $("greet").textContent=(h<12?"Good morning":h<17?"Good afternoon":"Good evening")+", Regu";
+  $("hd").textContent=dayName(t,{weekday:"long",day:"numeric",month:"long"});
+  renderToday(t,info);renderTasks();renderCal();renderHabits();renderSleep();
+}
+function renderToday(t,info){
+  $("dayPill").innerHTML=`<i style="background:${info.color}"></i>${esc(info.label)}`;
+  const p=periodOn(t);
+  if(info.work){const o=office(t);$("officeHrs").textContent=`Office ${fmtT(o.a)} – ${fmtT(o.l)}`;$("officeNote").textContent=o.late?"Late start, so you leave later":p&&p.notes?p.notes:"";
+    $("arriveRow").innerHTML=`<span class="meta">Reached at</span><input type="time" id="arrIn" value="${fromMin(o.a)}" style="width:130px"><button class="btn sm" id="arrNow">I'm here now</button>`;}
+  else{$("officeHrs").textContent=info.kind==="leave"?"Enjoy your time in India":"Day off — no office";$("officeNote").textContent=p&&p.notes?p.notes:"";$("arriveRow").innerHTML=""}
+  drawTL();
+  const nm=nowMin(),te=eventsOn(t),cur=te.find(e=>toMin(e.start)<=nm&&nm<evEnd(e)),nxt=te.find(e=>toMin(e.start)>nm);
+  const urg=D.tasks.filter(x=>!x.done&&(x.quadrant==="UI"||isOver(x)||(x.due&&x.due.slice(0,10)===t)));
+  let nw="";
+  if(cur)nw+=`<div class="nowrow hot"><b>Now</b><span><strong>${esc(cur.title)}</strong> until ${fmtT(evEnd(cur))}</span></div>`;
+  if(nxt)nw+=`<div class="nowrow"><b>Next</b><span><strong>${esc(nxt.title)}</strong> at ${fmtT(nxt.start)}</span></div>`;
+  if(!cur&&!nxt)nw+=`<div class="nowrow"><b>Next</b><span>Nothing else scheduled today.</span></div>`;
+  if(urg.length)nw+=`<div class="nowrow hot"><b>Do</b><span>${urg.length} urgent: ${urg.slice(0,3).map(x=>esc(x.title)).join(" · ")}</span></div>`;
+  $("now").innerHTML=nw;
+  // habits today: habits scheduled today, else all active habits
+  const ws=weekStart(t),sched=D.habits.filter(h=>h.active&&te.some(e=>e.habit===h.id)),list=sched.length?sched:D.habits.filter(h=>h.active);
+  $("habSum").textContent=sched.length?"scheduled today":"tap when done";
+  $("todayHabits").innerHTML=list.length?list.map(h=>{const d=!!logged(h.id,t),c=weekCount(h.id,ws),ev=te.find(e=>e.habit===h.id);return`<button class="hchip ${d?"done":""}" style="--c:${h.color}" data-hlog="${esc(h.id)}">${d?'<span class="tick">✓</span>':""}${ring(c/h.perWeek,h.color,52,c+"/"+h.perWeek)}<span>${esc(h.name)}</span><span class="meta" style="font-size:11px">${ev?fmtT(ev.start):d?"Done":"Tap if done"}</span></button>`}).join(""):`<div class="empty" style="width:100%">Add activities in the Habits tab.</div>`;
+  $("todaySched").innerHTML=te.length?te.map(e=>{const past=evEnd(e)<=nm,c=e===cur;return`<li class="${past?"past":""} ${c?"cur":""}" data-e="${esc(e.id)}"><div class="t">${fmtT(e.start)}${e.end?`<small>to ${fmtT(e.end)}</small>`:""}</div><div><div class="ttl">${esc(e.title)}</div>${e.notes?`<div class="meta">${esc(e.notes)}</div>`:""}</div><span class="bar" style="background:${evColor(e)}"></span></li>`}).join(""):`<div class="empty">Nothing scheduled. Tap + to add, or let the Habits tab fit your activities in.</div>`;
+  $("todayTasks").innerHTML=urg.length?urg.map(card).join(""):`<div class="empty">Nothing urgent. Nice.</div>`;
+  const last=D.sleep.filter(r=>r.date<=t).sort((a,b)=>b.date.localeCompare(a.date))[0],tgt=Number(S().sleepTarget);
+  if(last&&last.date===t){const hrs=sleepHours(last);$("sleepMini").innerHTML=`<h2>Last night <button class="btn sm" data-tab="sleep">Sleep log</button></h2><div class="row" style="gap:16px">${ring(hrs/tgt,hrs>=tgt?"var(--ok)":"var(--leave)",72,hrs.toFixed(1)+"h")}<div><div class="ttl">${fmtT(last.bed)} → ${fmtT(last.wake)}</div><div class="meta">${hrs>=tgt?"Target met":"Short of your "+tgt+"h target by "+(tgt-hrs).toFixed(1)+"h"}${last.quality?" · "+"★".repeat(last.quality):""}</div></div></div>`}
+  else $("sleepMini").innerHTML=`<h2>How did you sleep?</h2><button class="btn p" data-act="sleep">🌙 Log last night</button>`;
+}
+function drawTL(){
+  const svg=$("tl"),W=svg.clientWidth||600,H=svg.clientHeight||96,t=today(),info=dayInfo(t),s=S();
+  const A=240,B=1440,x=m=>Math.max(0,Math.min(W,(m-A)/(B-A)*W)),y0=14,bh=40;let g="";
+  g+=`<rect x="0" y="${y0}" width="${W}" height="${bh}" rx="10" fill="var(--soft)"/>`;
+  const wake=toMin(s.wake),bed=toMin(s.bedtime);
+  g+=`<rect x="0" y="${y0}" width="${x(wake)}" height="${bh}" rx="10" fill="#6b5bd6" opacity=".85"/>`;
+  if(bed>A)g+=`<rect x="${x(bed)}" y="${y0}" width="${W-x(bed)}" height="${bh}" rx="10" fill="#6b5bd6" opacity=".85"/>`;
+  if(info.work){const o=office(t);g+=`<rect x="${x(o.a)}" y="${y0}" width="${x(o.l)-x(o.a)}" height="${bh}" rx="8" fill="var(--work)" opacity=".9"/>`;if(W>380)g+=`<text x="${(x(o.a)+x(o.l))/2}" y="${y0+bh/2}" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="12" font-weight="700" font-family="Archivo,system-ui,sans-serif">Office</text>`}
+  eventsOn(t).forEach(e=>{if(!e.start)return;const a=toMin(e.start),b=evEnd(e);g+=`<rect x="${x(a)}" y="${y0+5}" width="${Math.max(4,x(b)-x(a))}" height="${bh-10}" rx="6" fill="${evColor(e)}" stroke="var(--card)" stroke-width="1.5"/>`});
+  [6,9,12,15,18,21].forEach(h=>{const X=x(h*60);g+=`<line x1="${X}" y1="${y0+bh+3}" x2="${X}" y2="${y0+bh+8}" stroke="var(--mut)"/>`;if(W>340||h%6===0)g+=`<text x="${X}" y="${y0+bh+22}" text-anchor="middle" font-size="11" fill="var(--mut)" font-family="Archivo,system-ui,sans-serif">${h%12||12}${h<12?"a":"p"}</text>`});
+  const n=nowMin();if(n>=A){const X=x(n);g+=`<line x1="${X}" y1="${y0-6}" x2="${X}" y2="${y0+bh+6}" stroke="var(--red)" stroke-width="2.5"/><circle cx="${X}" cy="${y0-6}" r="4.5" fill="var(--red)"/>`}
+  svg.innerHTML=g;
+}
+new ResizeObserver(drawTL).observe($("tlFig"));
+function card(t){return`<div class="tcard ${t.done?"done":""}"><input type="checkbox" class="chk" data-d="${esc(t.id)}" ${t.done?"checked":""} aria-label="Done"><div class="body" data-t="${esc(t.id)}"><div class="ttl">${esc(t.title)}</div><div class="meta">${tag(t.type)}${t.due?`<span class="${isOver(t)?"over":""}">Due ${fmtDT(t.due)}</span>`:""}${t.remind?` · 🔔 ${fmtDT(t.remind)}`:""}</div></div></div>`}
+function renderTasks(){
+  const fd=$("fDone").checked,open=D.tasks.filter(t=>!t.done);
+  $("taskCount").textContent=open.length+" open";
+  $("qbar").innerHTML=open.length?QK.map(k=>{const n=open.filter(t=>(t.quadrant||"NUI")===k).length;return n?`<span style="width:${n/open.length*100}%;background:${Q[k][2]}" title="${Q[k][0]}: ${n}"></span>`:""}).join(""):"";
+  $("mx").innerHTML=QK.map(k=>{const l=D.tasks.filter(t=>(t.quadrant||"NUI")===k&&(!fType||t.type===fType)&&(fd||!t.done)).sort((a,b)=>(a.done-b.done)||((a.due||"9")>(b.due||"9")?1:-1));return`<div class="q" style="--qc:${Q[k][2]}"><h3>${Q[k][0]}</h3><div class="qd">${Q[k][1]} · ${l.filter(t=>!t.done).length} open</div>${l.map(card).join("")||'<div class="meta">Empty</div>'}</div>`}).join("");
+}
+function renderCal(){
+  const t=today();
+  if(calMode==="month"){
+    const r=pd(calRef),first=new Date(r.getFullYear(),r.getMonth(),1),start=addD(ymd(first),-first.getDay());
+    $("calTitle").textContent=first.toLocaleDateString(undefined,{month:"long",year:"numeric"});
+    let h=["S","M","T","W","T","F","S"].map(d=>`<div class="dh">${d}</div>`).join("");
+    for(let i=0;i<42;i++){const ds=addD(start,i),inf=dayInfo(ds),ev=eventsOn(ds),out=pd(ds).getMonth()!==first.getMonth();
+      const due=D.tasks.filter(x=>!x.done&&x.due&&x.due.slice(0,10)===ds).length;
+      h+=`<button class="c ${out?"out":""} ${inf.kind!=="work"?inf.kind:""} ${ds===t?"today":""}" data-day="${ds}" aria-label="${dayName(ds)} ${inf.label}"><span>${pd(ds).getDate()}</span><span class="dots">${ev.slice(0,4).map(e=>`<i style="background:${evColor(e)}"></i>`).join("")}${due?'<i style="background:var(--red)"></i>':""}</span></button>`}
+    $("calBody").innerHTML=`<div class="cal">${h}</div>`;
+  }else{
+    const ws=weekStart(calRef);$("calTitle").textContent=dayName(ws,{day:"numeric",month:"short"})+" – "+dayName(addD(ws,6),{day:"numeric",month:"short",year:"numeric"});
+    $("calBody").innerHTML=[...Array(7)].map((_,i)=>{const ds=addD(ws,i),inf=dayInfo(ds),ev=eventsOn(ds),o=inf.work?office(ds):null;return`<div class="wkday"><h4><span>${dayName(ds,{weekday:"long",day:"numeric",month:"short"})} ${ds===t?'<span class="pill" style="background:var(--red);color:#fff">Today</span>':""}</span><button class="btn sm" data-day="${ds}">Open</button></h4><div class="meta"><span class="pill"><i style="background:${inf.color}"></i>${esc(inf.label)}${o?" · "+fmtT(o.a)+"–"+fmtT(o.l):""}</span></div><ul class="sched">${ev.map(e=>`<li data-e="${esc(e.id)}"><div class="t" style="font-size:17px">${fmtT(e.start)}</div><div><div class="ttl">${esc(e.title)}</div>${e.end?`<div class="meta">to ${fmtT(e.end)}</div>`:""}</div><span class="bar" style="background:${evColor(e)}"></span></li>`).join("")}</ul></div>`}).join("");
+  }
+  const ps=D.periods.slice().sort((a,b)=>b.start.localeCompare(a.start));
+  $("periodList").innerHTML=ps.length?ps.map(p=>`<div class="tcard" data-p="${esc(p.id)}" style="cursor:pointer"><span style="font-size:22px">${p.kind==="leave"?"✈️":"⚓"}</span><div class="body"><div class="ttl">${p.kind==="leave"?"India leave":"Offshore"}: ${dayName(p.start)} – ${dayName(p.end)}</div><div class="meta">${Math.round((pd(p.end)-pd(p.start))/864e5)+1} days${p.notes?" · "+esc(p.notes):""}${p.kind==="offshore"?" · every day is a working day":""}</div></div></div>`).join(""):`<div class="meta">No trips added. Leave days are skipped when fitting habits; offshore makes every day a working day.</div>`;
+}
+function renderHabits(){
+  const t=today(),ws=weekStart(t),days=[...Array(7)].map((_,i)=>addD(ws,i)),act=D.habits.filter(h=>h.active);
+  const tot=act.reduce((a,h)=>a+Math.min(weekCount(h.id,ws),h.perWeek),0),goal=act.reduce((a,h)=>a+h.perWeek,0);
+  $("wkHab").textContent=goal?`${tot} of ${goal} sessions done`:"";
+  $("habGrid").innerHTML=D.habits.map(h=>{const c=weekCount(h.id,ws);return`<div class="hcard" style="--c:${h.color};${h.active?"":"opacity:.55"}"><div data-h="${esc(h.id)}" style="display:flex;flex-direction:column;align-items:center;gap:4px">${ring(c/h.perWeek,h.color,78,c+"/"+h.perWeek)}<div class="ttl">${esc(h.name)}</div><div class="meta">${h.perWeek}×/wk · ${h.duration} min · ${h.pref}${h.active?"":" · off"}</div></div><div class="week7">${days.map(ds=>{const on=!!logged(h.id,ds),pl=D.events.some(e=>e.habit===h.id&&e.date===ds);return`<button class="${on?"on":""} ${pl&&!on?"plan":""}" data-hlog="${esc(h.id)}" data-ds="${ds}" aria-label="${dayName(ds)} ${on?"done":"not done"}">${"SMTWTFS"[pd(ds).getDay()]}</button>`}).join("")}</div></div>`}).join("")||`<div class="empty">No activities yet.</div>`;
+  renderPlan();
+}
+function renderPlan(){
+  if(!placements.length){$("planBox").innerHTML="";return}
+  const ws=addD(weekStart(today()),planOff*7),days=[...Array(7)].map((_,i)=>addD(ws,i)),n=placements.filter(p=>p.on).length;
+  $("planBox").innerHTML=`<div class="plan7">${days.map(ds=>{const inf=dayInfo(ds);return`<div class="col ${inf.kind==="off"?"off":inf.kind==="leave"?"leave":""}"><h5>${dayName(ds,{weekday:"short"})}<br>${pd(ds).getDate()}</h5>${placements.map((p,i)=>p.ds===ds?`<button class="pchip ${p.on?"":"no"}" style="--c:${p.color}" data-pi="${i}">${esc(p.name)}<br>${fmtT(p.s)}</button>`:"").join("")}</div>`}).join("")}</div><div class="row" style="margin-top:12px"><button class="btn p" id="planAdd" ${n?"":"disabled"}>Add ${n} to schedule</button><button class="btn" id="planClr">Clear</button></div>`;
+}
+function renderSleep(){
+  const t=today(),tgt=Number(S().sleepTarget),rows=D.sleep.slice().sort((a,b)=>b.date.localeCompare(a.date)),wk=rows.filter(r=>r.date>addD(t,-7)),hrs=wk.map(sleepHours).filter(x=>x!==null);
+  const avg=hrs.length?hrs.reduce((a,b)=>a+b,0)/hrs.length:null,debt=hrs.reduce((a,h)=>a+Math.max(0,tgt-h),0),last=rows[0]?sleepHours(rows[0]):null;
+  $("sleepStats").innerHTML=`<div class="stat"><b>${last!==null?last.toFixed(1)+"h":"–"}</b><span>Last night</span></div><div class="stat"><b>${avg!==null?avg.toFixed(1)+"h":"–"}</b><span>7-night average</span></div><div class="stat"><b style="color:${debt>3?"var(--leave)":"inherit"}">${hrs.length?debt.toFixed(1)+"h":"–"}</b><span>Short of ${tgt}h target this week</span></div>`;
+  const n=14,mx=Math.max(10,tgt+1),days=[...Array(n)].map((_,i)=>addD(t,i-n+1));
+  $("sleepBars").innerHTML=`<div class="target" style="top:${130-tgt/mx*130}px">target ${tgt}h</div>`+days.map(ds=>{const r=D.sleep.find(x=>x.date===ds),h=r?sleepHours(r):0;return`<div class="b" title="${ds}: ${h?h.toFixed(1)+"h":"no log"}"><div class="bw"><i class="${h&&h<tgt?"low":""}" style="height:${h?h/mx*100+"%":"4px"};${h?"":"opacity:.2"}"></i></div><span>${pd(ds).getDate()}</span></div>`}).join("");
+  $("sleepList").innerHTML=rows.slice(0,14).map(r=>{const h=sleepHours(r);return`<div class="tcard" data-s="${esc(r.id)}" style="cursor:pointer"><span style="font-size:20px">🌙</span><div class="body"><div class="ttl">${dayName(r.date,{weekday:"short",day:"numeric",month:"short"})} · ${h!==null?h.toFixed(1)+"h":""}</div><div class="meta">${fmtT(r.bed)} → ${fmtT(r.wake)}${r.quality?" · "+"★".repeat(r.quality):""}${r.notes?" · "+esc(r.notes):""}</div></div></div>`}).join("")||`<div class="empty">No sleep logged yet. Log each morning to see your pattern.</div>`;
+}
+
+/* ---------- Sheets / forms ---------- */
+const open=id=>{$(id).classList.add("on")};const close=id=>$(id).classList.remove("on");
+document.querySelectorAll(".ov").forEach(o=>o.addEventListener("click",e=>{if(e.target===o||e.target.closest("[data-close]"))o.classList.remove("on")}));
+function toast(msg,ms=5000){const t=$("toast");t.innerHTML=msg;t.classList.add("on");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),ms)}
+$("toast").addEventListener("click",()=>$("toast").classList.remove("on"));
+async function save(name,obj,ovId){try{const id=await api("saveRow",name,obj);if(ovId)close(ovId);return id}catch(e){toast("Couldn't save: "+esc(e.message||e))}}
+async function del(name,id,ovId,btn){if(btn.dataset.c!=="1"){btn.dataset.c="1";btn.textContent="Tap again to delete";setTimeout(()=>{btn.dataset.c="";btn.textContent="Delete"},3000);return}btn.dataset.c="";btn.textContent="Delete";api("deleteRow",name,id);close(ovId)}
+function setSeg(id,v){document.querySelectorAll("#"+id+" button").forEach(b=>b.classList.toggle("on",b.dataset.v===v))}
+
+// Task
+function drawPick(){$("qpick").innerHTML=QK.map(k=>`<button type="button" data-q="${k}" style="--qc:${Q[k][2]}" class="${selQ===k?"sel":""} ${sugQ===k?"sug":""}">${Q[k][0]}<br><span style="font-weight:400;font-size:12px">${Q[k][1]}</span></button>`).join("")}
+function reSuggest(){const s=suggest($("tTitle").value,$("tNotes").value,$("tDue").value);sugQ=s.q;$("sugWhy").textContent="Suggestion: "+Q[s.q][1]+" — "+s.why+".";drawPick()}
+function openT(t){editT=t||null;$("fTh").textContent=t?"Edit task":"New task";$("tTitle").value=t?.title||"";$("tNotes").value=t?.notes||"";$("tType").value=t?.type||"work";$("tDue").value=t?.due||"";$("tRem").value=t?.remind||"";selQ=t?.quadrant||null;$("tDel").style.visibility=t?"visible":"hidden";reSuggest();open("ovT")}
+["tTitle","tNotes","tDue"].forEach(id=>$(id).addEventListener("input",reSuggest));
+$("qpick").addEventListener("click",e=>{const b=e.target.closest("[data-q]");if(b){selQ=b.dataset.q;drawPick()}});
+$("askQ").addEventListener("click",async()=>{
+  if(!aiOn){$("sugWhy").textContent="Needs a Claude API key (see setup). The built-in suggestion still works.";return}
+  const ttl=$("tTitle").value.trim();if(!ttl)return;$("sugWhy").textContent="Asking Claude…";
+  try{const r=await api("askClaude",`Classify this to-do into the Eisenhower matrix for a project engineer at an offshore oil & gas EPC contractor in Saudi Arabia. Now: ${new Date().toString()}. Task: "${ttl}". Notes: "${$("tNotes").value}". Type: ${$("tType").value}. Due: ${$("tDue").value||"none"}. Return {"quadrant":"UI"|"NUI"|"UNI"|"NUNI","reason":"one short sentence"}`,"quick");
+    if(r&&QK.includes(r.quadrant)){sugQ=r.quadrant;$("sugWhy").textContent="Claude suggests "+Q[r.quadrant][1]+": "+(r.reason||"");drawPick()}}catch(e){$("sugWhy").textContent="Couldn't reach Claude just now."}
+});
+$("fT").addEventListener("submit",e=>{e.preventDefault();save("Tasks",{id:editT?.id||"",title:$("tTitle").value.trim(),notes:$("tNotes").value.trim(),type:$("tType").value,due:$("tDue").value,remind:$("tRem").value,quadrant:selQ||sugQ,suggested:sugQ,done:editT?.done||false,created:editT?.created||new Date().toISOString()},"ovT")});
+$("tDel").addEventListener("click",e=>editT&&del("Tasks",editT.id,"ovT",e.currentTarget));
+
+// Event
+function openE(ev,date){editE=ev||null;$("fEh").textContent=ev?"Edit schedule item":"New schedule item";$("eTitle").value=ev?.title||"";$("eDate").value=ev?.date||date||today();$("eStart").value=ev?.start||"";$("eEnd").value=ev?.end||"";$("eType").value=ev?.type||"personal";$("eRem").value=String(ev?.remind??15);$("eNotes").value=ev?.notes||"";$("eDel").style.visibility=ev?"visible":"hidden";close("ovD");open("ovE")}
+$("fE").addEventListener("submit",e=>{e.preventDefault();save("Events",{id:editE?.id||"",title:$("eTitle").value.trim(),date:$("eDate").value,start:$("eStart").value,end:$("eEnd").value,type:$("eType").value,remind:Number($("eRem").value),notes:$("eNotes").value.trim(),habit:editE?.habit||""},"ovE")});
+$("eDel").addEventListener("click",e=>editE&&del("Events",editE.id,"ovE",e.currentTarget));
+
+// Habit
+const COLORS=["#12a150","#f59e0b","#e0457b","#ef6c3a","#2563eb","#0891b2","#6b5bd6","#0ea5a4"];
+$("hPer").innerHTML=[1,2,3,4,5,6,7].map(n=>`<option value="${n}">${n}× a week</option>`).join("");
+$("hDur").innerHTML=[15,20,30,45,60,75,90,120,150,180].map(n=>`<option value="${n}">${n} min</option>`).join("");
+function openH(h){editH=h||null;$("fHh").textContent=h?"Edit activity":"New activity";$("hName").value=h?.name||"";$("hPer").value=String(h?.perWeek||3);$("hDur").value=String(h?.duration||60);hPref=h?.pref||"evening";setSeg("hPref",hPref);hColor=h?.color||COLORS[D.habits.length%COLORS.length];drawSw();$("hAct").checked=h?h.active:true;$("hDel").style.visibility=h?"visible":"hidden";open("ovH")}
+function drawSw(){$("hCol").innerHTML=COLORS.map(c=>`<button type="button" style="background:${c}" class="${c===hColor?"on":""}" data-c="${c}" aria-label="Colour"></button>`).join("")}
+$("hCol").addEventListener("click",e=>{const b=e.target.closest("[data-c]");if(b){hColor=b.dataset.c;drawSw()}});
+$("hPref").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(b){hPref=b.dataset.v;setSeg("hPref",hPref)}});
+$("fH").addEventListener("submit",e=>{e.preventDefault();save("Habits",{id:editH?.id||"",name:$("hName").value.trim(),perWeek:Number($("hPer").value),duration:Number($("hDur").value),pref:hPref,color:hColor,active:$("hAct").checked,source:editH?.source||"app"},"ovH")});
+$("hDel").addEventListener("click",e=>editH&&del("Habits",editH.id,"ovH",e.currentTarget));
+function toggleLog(hid,ds){const l=logged(hid,ds);if(l)api("deleteRow","HabitLog",l.id);else api("saveRow","HabitLog",{habit:hid,date:ds})}
+
+// Sleep
+function openS(r){editS=r||null;const s=S();$("sDate").value=r?.date||today();$("sBed").value=r?.bed||s.bedtime;$("sWake").value=r?.wake||s.wake;sQual=r?.quality||0;drawStars();$("sNotes").value=r?.notes||"";$("sDel").style.visibility=r?"visible":"hidden";calcS();open("ovS")}
+function drawStars(){$("sQ").innerHTML=[1,2,3,4,5].map(n=>`<button type="button" class="${n<=sQual?"on":""}" data-q="${n}" aria-label="${n} stars">★</button>`).join("")}
+function calcS(){const h=sleepHours({bed:$("sBed").value,wake:$("sWake").value});$("sHours").textContent=h!==null?h.toFixed(1)+" hours of sleep":""}
+["sBed","sWake"].forEach(id=>$(id).addEventListener("input",calcS));
+$("sQ").addEventListener("click",e=>{const b=e.target.closest("[data-q]");if(b){sQual=Number(b.dataset.q);drawStars()}});
+$("fS").addEventListener("submit",e=>{e.preventDefault();const d=$("sDate").value,ex=editS||D.sleep.find(r=>r.date===d);save("Sleep",{id:ex?.id||"",date:d,bed:$("sBed").value,wake:$("sWake").value,quality:sQual,notes:$("sNotes").value.trim()},"ovS")});
+$("sDel").addEventListener("click",e=>editS&&del("Sleep",editS.id,"ovS",e.currentTarget));
+
+// Period
+function openP(p,kind){editP=p||null;pKind=p?.kind||kind||"leave";setSeg("pKind",pKind);pHint();$("pStart").value=p?.start||today();$("pEnd").value=p?.end||addD(today(),pKind==="leave"?14:21);$("pNotes").value=p?.notes||"";$("pDel").style.visibility=p?"visible":"hidden";close("ovMenu");open("ovP")}
+function pHint(){$("fPh").textContent=pKind==="leave"?"India leave":"Offshore trip";$("pHint").textContent=pKind==="leave"?"These days show as leave; no office hours and no habits suggested.":"Every day in this range is a working day, Fridays and Saturdays included."}
+$("pKind").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(b){pKind=b.dataset.v;setSeg("pKind",pKind);pHint()}});
+$("fP").addEventListener("submit",e=>{e.preventDefault();if($("pEnd").value<$("pStart").value)return toast("End date is before the start date.");save("Periods",{id:editP?.id||"",kind:pKind,start:$("pStart").value,end:$("pEnd").value,notes:$("pNotes").value.trim()},"ovP")});
+$("pDel").addEventListener("click",e=>editP&&del("Periods",editP.id,"ovP",e.currentTarget));
+
+// Day detail
+function openDay(ds){const inf=dayInfo(ds),ev=eventsOn(ds),o=inf.work?office(ds):null,due=D.tasks.filter(x=>!x.done&&x.due&&x.due.slice(0,10)===ds);
+  $("dayBox").innerHTML=`<h2>${dayName(ds,{weekday:"long",day:"numeric",month:"long"})}</h2><span class="pill"><i style="background:${inf.color}"></i>${esc(inf.label)}</span>${o?`<div class="row" style="margin-top:12px"><span class="ttl">Office ${fmtT(o.a)} – ${fmtT(o.l)}</span><span class="meta">Start</span><input type="time" id="dayArr" value="${fromMin(o.a)}" style="width:130px" data-ds="${ds}"></div>`:""}<ul class="sched" style="margin-top:10px">${ev.map(e=>`<li data-e="${esc(e.id)}"><div class="t" style="font-size:17px">${fmtT(e.start)}</div><div><div class="ttl">${esc(e.title)}</div>${e.end?`<div class="meta">to ${fmtT(e.end)}</div>`:""}</div><span class="bar" style="background:${evColor(e)}"></span></li>`).join("")||'<li style="cursor:default"><div></div><div class="meta">Nothing scheduled</div></li>'}</ul>${due.length?`<h2 style="font-size:16px;margin-top:12px">Tasks due</h2>${due.map(card).join("")}`:""}<div class="row" style="margin-top:14px;justify-content:space-between"><button class="btn p" data-addev="${ds}">+ Schedule item</button><button class="btn" data-close>Close</button></div>`;open("ovD")}
+async function setArrive(ds,v){if(!v)return;const ex=D.days.find(x=>x.date===ds);api("saveRow","Days",{id:ex?ex.id:ds,date:ds,arrive:v})}
+
+// Settings
+function openSet(){$("connInfo").textContent=CFG.url?"Connected to your Google Sheet":"Not connected";const s=S();setSeg("themeSeg",localTheme()||s.theme||"auto");$("stStart").value=s.workStart;$("stHours").value=s.workHours;$("stWake").value=s.wake;$("stBed").value=s.bedtime;$("stTarget").value=s.sleepTarget;$("stBedRem").checked=s.bedRemind==="on";$("stFam").checked=s.family==="on";open("ovSet")}
+const localTheme=()=>{try{return localStorage.getItem("theme")}catch(e){return null}};
+function applyTheme(v){if(v&&v!=="auto")document.documentElement.dataset.theme=v;else delete document.documentElement.dataset.theme;try{localStorage.setItem("theme",v||"auto")}catch(e){}drawTL()}
+$("themeSeg").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(b){setSeg("themeSeg",b.dataset.v);applyTheme(b.dataset.v)}});
+$("fSet").addEventListener("submit",async e=>{e.preventDefault();
+  const th=document.querySelector("#themeSeg .on")?.dataset.v||"auto",fam=$("stFam").checked?"on":"off";
+  const vals={theme:th,workStart:$("stStart").value||"08:00",workHours:$("stHours").value||"9",wake:$("stWake").value||"05:30",bedtime:$("stBed").value||"22:30",sleepTarget:$("stTarget").value||"7.5",bedRemind:$("stBedRem").checked?"on":"off",family:fam};
+  try{await api("saveRows","Settings",Object.keys(vals).map(k=>({id:k,value:vals[k]})));
+    const fh=D.habits.find(h=>h.id==="family"||/family/i.test(h.name));
+    if(fam==="on"&&!fh)await api("saveRow","Habits",{id:"family",name:"Family time",perWeek:7,duration:90,pref:"evening",color:"#ef6c3a",active:true,source:"default"});
+    else if(fh&&String(fh.active)!==String(fam==="on"))await api("saveRow","Habits",{...fh,active:fam==="on"});
+    close("ovSet");toast("Settings saved")}catch(err){toast("Couldn't save settings")}
+});
+
+// Plan with Claude
+$("planGo").addEventListener("click",async()=>{
+  const txt=$("planIn").value.trim();if(!txt)return;
+  if(!aiOn){$("planSt").textContent="Needs a Claude API key. Or send your week to Claude in chat; it will write it into your Sheet.";return}
+  $("planSt").textContent="Claude is planning…";$("planGo").disabled=true;
+  const ws=weekStart(today()),wk=[...Array(14)].map((_,i)=>{const ds=addD(ws,i),inf=dayInfo(ds),o=inf.work?office(ds):null;return ds+" "+inf.label+(o?" office "+fromMin(o.a)+"-"+fromMin(o.l):"")});
+  try{const r=await api("askClaude",`Build a schedule for a project engineer in Saudi Arabia. Today is ${today()}.
+Day types and office hours for the next two weeks:\n${wk.join("\n")}
+Usual wake ${S().wake}, bedtime ${S().bedtime}. Existing items (avoid clashes): ${JSON.stringify(D.events.filter(e=>e.date>=ws).slice(0,80).map(e=>[e.date,e.start,e.end,e.title]))}
+User's request:\n"""${txt}"""
+Put fixed-time activities as events (personal things outside office hours unless stated). Deadlines/to-dos without a slot become tasks with an Eisenhower quadrant.
+Return {"events":[{"date":"YYYY-MM-DD","start":"HH:MM","end":"HH:MM","title":"","type":"work|personal|family","notes":""}],"tasks":[{"title":"","type":"work|personal|family","due":"YYYY-MM-DDTHH:MM or empty","quadrant":"UI|NUI|UNI|NUNI"}],"summary":"one sentence"}`,"default");
+    planDraft={events:(r.events||[]).filter(x=>x.date&&x.start&&x.title),tasks:(r.tasks||[]).filter(x=>x.title)};$("planSt").textContent=r.summary||"";drawPlanDraft();
+  }catch(e){$("planSt").textContent="Couldn't build the plan. Try rephrasing."}
+  $("planGo").disabled=false;
+});
+function drawPlanDraft(){const p=planDraft;if(!p)return;
+  $("planOut").innerHTML=`<ul class="sched" style="margin-top:10px">${p.events.map((e,i)=>`<li style="cursor:default"><div class="t" style="font-size:16px">${fmtT(e.start)}<small>${dayName(e.date)}</small></div><div><div class="ttl">${esc(e.title)}</div><div class="meta">${e.end?"to "+fmtT(e.end):""} ${esc(e.notes||"")}</div></div><input type="checkbox" class="chk" data-pe="${i}" checked aria-label="Include"></li>`).join("")}</ul>${p.tasks.map((t,i)=>`<div class="tcard"><input type="checkbox" class="chk" data-pt="${i}" checked aria-label="Include"><div style="flex:1"><div class="ttl">${esc(t.title)}</div><div class="meta">${Q[t.quadrant]?Q[t.quadrant][1]:""}${t.due?" · due "+fmtDT(t.due):""}</div></div></div>`).join("")}<button class="btn p" id="draftSave" style="margin-top:12px">Add selected</button>`;
+  $("draftSave").onclick=async()=>{const ev=p.events.filter((_,i)=>document.querySelector(`[data-pe="${i}"]`)?.checked).map(e=>({title:e.title,date:e.date,start:e.start,end:e.end||"",type:TC[e.type]?e.type:"personal",notes:e.notes||"",remind:15,source:"claude"}));
+    const tk=p.tasks.filter((_,i)=>document.querySelector(`[data-pt="${i}"]`)?.checked).map(t=>({title:t.title,type:TC[t.type]?t.type:"work",due:t.due||"",quadrant:QK.includes(t.quadrant)?t.quadrant:"NUI",suggested:t.quadrant,done:false,source:"claude",created:new Date().toISOString()}));
+    try{if(ev.length)await api("saveRows","Events",ev);if(tk.length)await api("saveRows","Tasks",tk);toast((ev.length+tk.length)+" items added");planDraft=null;$("planOut").innerHTML="";$("planIn").value="";close("ovPlan")}catch(e){toast("Couldn't save")}};
+}
+
+/* ---------- Connect ---------- */
+function openConn(){$("cUrl").value=CFG.url;$("cPass").value=CFG.pass;$("cMsg").textContent="";close("ovSet");open("ovConn")}
+$("fConn").addEventListener("submit",async e=>{e.preventDefault();const u=$("cUrl").value.trim(),pw=$("cPass").value.trim();
+  if(!/^https:\/\/script\.google(usercontent)?\.com\//.test(u)){$("cMsg").textContent="That doesn't look like an Apps Script Web app link (it starts with https://script.google.com/macros/s/).";return}
+  const old={...CFG};CFG.url=u;CFG.pass=pw;$("cMsg").textContent="Checking…";
+  try{await remote("getAll",[]);ls("apiUrl",u);ls("apiPass",pw);close("ovConn");toast("Connected ✓");load()}
+  catch(err){Object.assign(CFG,old);$("cMsg").textContent=err instanceof ServerError?err.message:"Couldn't reach it. Check your internet and the link."}
+});
+$("openConn").addEventListener("click",openConn);
+
+/* ---------- Voice → Claude ---------- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec=null,listening=false,baseText="";
+try{const l=ls("micLang");if(l)$("micLang").value=l}catch(e){}
+$("micLang").addEventListener("change",()=>ls("micLang",$("micLang").value));
+function micUI(on,msg){listening=on;$("micBtn").classList.toggle("on",on);$("micSt").textContent=msg||(on?"Listening… tap to stop":"Tap the mic and speak")}
+function startMic(){
+  if(!SR){$("micHint").textContent="Voice typing isn't available here. Tap the text box, then the 🎤 on your iPhone keyboard to dictate.";$("planIn").focus();return}
+  if(listening){rec&&rec.stop();return}
+  rec=new SR();rec.lang=$("micLang").value;rec.continuous=true;rec.interimResults=true;
+  baseText=$("planIn").value.trim();if(baseText)baseText+=" ";
+  rec.onresult=ev=>{let fin="",int="";for(let i=0;i<ev.results.length;i++){const t=ev.results[i][0].transcript;if(ev.results[i].isFinal)fin+=t+" ";else int+=t}$("planIn").value=(baseText+fin+int).trim()};
+  rec.onerror=ev=>{micUI(false);$("micHint").textContent=ev.error==="not-allowed"||ev.error==="service-not-allowed"?"Microphone blocked. Allow it in Settings → Safari → Microphone, or use the 🎤 on your keyboard.":ev.error==="no-speech"?"Didn't catch anything — try again.":"Voice stopped ("+ev.error+"). You can also use the 🎤 on your keyboard."};
+  rec.onend=()=>micUI(false,$("planIn").value?"Got it — check the text, then send":"");
+  try{rec.start();micUI(true);$("micHint").textContent=""}catch(e){micUI(false)}
+}
+$("micBtn").addEventListener("click",startMic);
+function claudePrompt(){
+  const t=today(),ws=weekStart(t),s=S();
+  const days=[...Array(14)].map((_,i)=>{const ds=addD(ws,i),inf=dayInfo(ds),o=inf.work?office(ds):null;return`${ds} ${dayName(ds,{weekday:"short"})}: ${inf.label}${o?", office "+fromMin(o.a)+"-"+fromMin(o.l):""}`}).join("\n");
+  const ev=D.events.filter(e=>e.date>=t&&e.date<=addD(ws,13)).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start)).slice(0,60).map(e=>`${e.date} ${e.start}${e.end?"-"+e.end:""} ${e.title}`).join("\n")||"none";
+  const hab=D.habits.filter(h=>h.active).map(h=>`${h.name} ${h.perWeek}x/week ${h.duration}min (${h.pref})`).join("; ")||"none";
+  const tasks=D.tasks.filter(x=>!x.done).slice(0,25).map(x=>`${x.title}${x.due?" due "+x.due:""}`).join("; ")||"none";
+  return `Please update my planner from what I say below, using the Google Sheets connector.
+Planner Google Sheet: ${D.sheetUrl||"(my Planner sheet)"}
+
+WHAT I SAID:
+"""${$("planIn").value.trim()}"""
+
+CONTEXT (today ${t}, Asia/Riyadh)
+Day types and office hours:
+${days}
+Wake ${s.wake}, bedtime ${s.bedtime}. Weekly habits: ${hab}
+Already scheduled:
+${ev}
+Open tasks: ${tasks}
+
+HOW TO WRITE IT (plain text cells, new id for each new row):
+- Events tab columns: id, date (YYYY-MM-DD), start (HH:MM 24h), end, title, type (work|personal|family), remind (15), notes, updated, source (claude), notified (blank), habit (blank)
+- Tasks tab columns: id, title, notes, type, due (YYYY-MM-DDTHH:MM or blank), remind (blank), quadrant (UI urgent+important | NUI important | UNI urgent | NUNI neither), suggested, done (FALSE), created, updated, source (claude), notified (blank)
+- India leave / offshore trips go in Periods: id, kind (leave|offshore), start, end, notes, updated
+Fit personal items outside office hours and avoid clashes. Show me the plan in a short list first, then write it once I confirm.`;
+}
+function claudeLink(){return"claude://claude.ai/new?q="+encodeURIComponent(claudePrompt())}
+$("sendClaude").addEventListener("click",()=>{if(!$("planIn").value.trim()){$("micHint").textContent="Say or type your plan first.";return}if(listening&&rec)rec.stop();
+  const l=claudeLink();location.href=l;setTimeout(()=>{if(!document.hidden)$("micHint").innerHTML='If Claude didn\'t open, tap <strong>Copy</strong> and paste it into a new Claude chat.'},1800)});
+$("copyClaude").addEventListener("click",async()=>{if(!$("planIn").value.trim())return;try{await navigator.clipboard.writeText(claudePrompt());$("micHint").textContent="Copied — paste it into a new chat in your Claude app."}catch(e){$("micHint").textContent="Couldn't copy on this device."}});
+
+/* ---------- Global clicks ---------- */
+function showTab(v){document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));document.querySelectorAll(".view").forEach(s=>s.classList.toggle("on",s.id==="v-"+v));window.scrollTo(0,0);if(v==="today")drawTL()}
+$("tabs").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(b)showTab(b.dataset.v)});
+$("fab").addEventListener("click",()=>open("ovMenu"));
+$("openSet").addEventListener("click",openSet);
+$("fType").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(b){fType=b.dataset.v;setSeg("fType",fType);renderTasks()}});
+$("fDone").addEventListener("change",renderTasks);
+$("calMode").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(b){calMode=b.dataset.v;setSeg("calMode",calMode);renderCal()}});
+$("cPrev").addEventListener("click",()=>{if(calMode==="month"){const d=pd(calRef);d.setDate(1);d.setMonth(d.getMonth()-1);calRef=ymd(d)}else calRef=addD(calRef,-7);renderCal()});
+$("cNext").addEventListener("click",()=>{if(calMode==="month"){const d=pd(calRef);d.setDate(1);d.setMonth(d.getMonth()+1);calRef=ymd(d)}else calRef=addD(calRef,7);renderCal()});
+$("cNow").addEventListener("click",()=>{calRef=today();renderCal()});
+$("planWk").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(b){planOff=Number(b.dataset.v);setSeg("planWk",b.dataset.v);placements=[];renderPlan()}});
+$("suggestBtn").addEventListener("click",()=>{const ws=addD(weekStart(today()),planOff*7);placements=suggestWeek(ws,today(),nowMin());renderPlan();if(!placements.length)$("planBox").innerHTML=`<div class="empty">Nothing to add — your active habits are already scheduled for that week, or there's no free slot.</div>`});
+document.addEventListener("click",async e=>{
+  const a=e.target.closest("[data-act]");
+  if(a){const k=a.dataset.act;close("ovMenu");if(k==="task")openT();else if(k==="event")openE();else if(k==="habit")openH();else if(k==="sleep")openS();else if(k==="period")openP(null,a.dataset.kind);else if(k==="plan")open("ovPlan");else if(k==="voice"){open("ovPlan");startMic()}return}
+  if(e.target.id==="connNow"){openConn();return}
+  const tb=e.target.closest("[data-tab]");if(tb){showTab(tb.dataset.tab);return}
+  const hl=e.target.closest("[data-hlog]");if(hl){toggleLog(hl.dataset.hlog,hl.dataset.ds||today());return}
+  const pi=e.target.closest("[data-pi]");if(pi){const p=placements[Number(pi.dataset.pi)];p.on=!p.on;renderPlan();return}
+  if(e.target.id==="planClr"){placements=[];renderPlan();return}
+  if(e.target.id==="planAdd"){const sel=placements.filter(p=>p.on);e.target.disabled=true;try{await api("saveRows","Events",sel.map(p=>({title:p.name,date:p.ds,start:fromMin(p.s),end:fromMin(p.e),type:p.habit==="family"?"family":"personal",remind:15,habit:p.habit,source:"habit"})));toast(sel.length+" sessions added to your schedule");placements=[];renderPlan()}catch(err){toast("Couldn't add");e.target.disabled=false}return}
+  if(e.target.id==="arrNow"){const n=Math.round(nowMin()/5)*5;setArrive(today(),fromMin(n));return}
+  const ad=e.target.closest("[data-addev]");if(ad){openE(null,ad.dataset.addev);return}
+  const t=e.target.closest("[data-t]");if(t){close("ovD");openT(D.tasks.find(x=>x.id===t.dataset.t));return}
+  const ev=e.target.closest("[data-e]");if(ev&&!ev.closest("#planOut")){openE(D.events.find(x=>x.id===ev.dataset.e));return}
+  const dy=e.target.closest("[data-day]");if(dy){openDay(dy.dataset.day);return}
+  const h=e.target.closest("[data-h]");if(h){openH(D.habits.find(x=>x.id===h.dataset.h));return}
+  const s=e.target.closest("[data-s]");if(s){openS(D.sleep.find(x=>x.id===s.dataset.s));return}
+  const p=e.target.closest("[data-p]");if(p){openP(D.periods.find(x=>x.id===p.dataset.p));return}
+});
+document.addEventListener("change",async e=>{
+  if(e.target.id==="arrIn"){setArrive(today(),e.target.value);return}
+  if(e.target.id==="dayArr"){await setArrive(e.target.dataset.ds,e.target.value);openDay(e.target.dataset.ds);return}
+  const c=e.target.closest("[data-d]");if(!c)return;api("saveRow","Tasks",{id:c.dataset.d,done:c.checked})
+});
+
+/* ---------- Reminders while open ---------- */
+let fired=new Set();try{fired=new Set(JSON.parse(localStorage.getItem("fired")||"[]"))}catch(e){}
+function checkRem(){const now=Date.now(),hits=[],fire=(k,at,win,msg)=>{if(at<=now&&now-at<win&&!fired.has(k)){fired.add(k);hits.push(msg)}};
+  D.tasks.forEach(t=>{if(t.done)return;if(t.remind)fire("t"+t.id+t.remind,new Date(t.remind).getTime(),864e5,"Task: <strong>"+esc(t.title)+"</strong>");else if(t.due)fire("p"+t.id+t.due,new Date(t.due).getTime()-9e5,9e5,"In 15 min: <strong>"+esc(t.title)+"</strong>");if(t.due)fire("o"+t.id+t.due,new Date(t.due).getTime(),864e5,"Still not done: <strong>"+esc(t.title)+"</strong>")});
+  D.events.forEach(e=>{if(!(e.remind>=0)||!e.start)return;const st=new Date(e.date+"T"+e.start).getTime(),at=st-e.remind*6e4;fire("e"+e.id+e.date+e.start+e.remind,at,Math.max(st-at,0)+9e5,(e.remind?"In "+e.remind+" min: ":"Now: ")+"<strong>"+esc(e.title)+"</strong> at "+fmtT(e.start))});
+  if(hits.length){toast("🔔 "+hits.join("<br>"),15000);try{localStorage.setItem("fired",JSON.stringify([...fired].slice(-300)))}catch(e){}}
+}
+
+/* ---------- Data ---------- */
+let loading=false;
+async function load(){
+  if(loading||!CFG.url){syncLabel();return}loading=true;
+  try{await flush();if(!queue.length){const d=await remote("getAll",[]);Object.assign(D,d);D.settings=d.settings||{};aiOn=d.ai;ready=true;persist();
+      if(!localTheme()&&D.settings.theme)applyTheme(D.settings.theme);
+      const here=location.origin+location.pathname;if(D.settings.appUrl!==here&&location.protocol==="https:")api("saveRow","Settings",{id:"appUrl",value:here});
+      $("planGo").style.display=aiOn?"":"none";syncLabel(true)}else syncLabel(false)}
+  catch(e){if(e instanceof ServerError){$("sync").innerHTML='<span class="offline">'+esc(e.message)+'</span>';if(/passcode/i.test(e.message))openConn()}else syncLabel(false)}
+  loading=false;render();checkRem();
+}
+try{const c=JSON.parse(ls("cache")||"null");if(c){Object.assign(D,c);ready=true}}catch(e){}
+render();syncLabel();if(CFG.url)load();else setTimeout(openConn,400);
+setInterval(load,60000);setInterval(()=>{render();checkRem()},30000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)load()});
+window.addEventListener("online",load);window.addEventListener("offline",()=>syncLabel(false));
+if("serviceWorker" in navigator&&window.isSecureContext)navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+</script>
+</body>
+</html>
