@@ -217,11 +217,11 @@ textarea{min-height:80px;resize:vertical}
     </div>
     <h2 id="calTitle" style="margin:14px 0 8px"></h2>
     <div id="calBody"></div>
-    <div class="legend" style="margin-top:10px"><span><i style="background:var(--off)"></i>Off (Fri, 2nd & 4th Sat)</span><span><i style="background:var(--leave)"></i>India leave</span><span><i style="background:var(--offshore)"></i>Offshore</span></div>
+    <div class="legend" style="margin-top:10px"><span><i style="background:var(--off)"></i>Off: Fri, 2nd & 4th Sat, holidays, personal leave</span><span><i style="background:var(--leave)"></i>India leave</span><span><i style="background:var(--offshore)"></i>Offshore</span></div>
   </div>
   <div class="card">
-    <h2>Leave & offshore</h2>
-    <div class="row"><button class="btn" data-act="period" data-kind="leave">✈ India leave</button><button class="btn" data-act="period" data-kind="offshore">⚓ Offshore trip</button></div>
+    <h2>Holidays, leave & offshore</h2>
+    <div class="row"><button class="btn" data-act="period" data-kind="holiday">🎉 Office holiday</button><button class="btn" data-act="period" data-kind="personal">🌴 Personal leave</button><button class="btn" data-act="period" data-kind="leave">✈️ India leave</button><button class="btn" data-act="period" data-kind="offshore">⚓ Offshore</button></div>
     <div id="periodList" style="margin-top:10px"></div>
   </div>
 </section>
@@ -269,6 +269,8 @@ textarea{min-height:80px;resize:vertical}
   <button data-act="sleep"><span class="ic">🌙</span>Log sleep</button>
   <button data-act="period" data-kind="leave"><span class="ic">✈️</span>India leave</button>
   <button data-act="period" data-kind="offshore"><span class="ic">⚓</span>Offshore trip</button>
+  <button data-act="period" data-kind="holiday"><span class="ic">🎉</span>Office holiday</button>
+  <button data-act="period" data-kind="personal"><span class="ic">🌴</span>Personal leave</button>
 </div><div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn" data-close>Close</button></div></div></div>
 
 <!-- Task form -->
@@ -339,7 +341,7 @@ textarea{min-height:80px;resize:vertical}
 <!-- Period form -->
 <div class="ov" id="ovP"><form class="sheet" id="fP">
   <h2 id="fPh">India leave</h2>
-  <div class="seg" id="pKind"><button type="button" data-v="leave">✈ India leave</button><button type="button" data-v="offshore">⚓ Offshore</button></div>
+  <div class="seg" id="pKind"><button type="button" data-v="holiday">🎉 Office holiday</button><button type="button" data-v="personal">🌴 Personal leave</button><button type="button" data-v="leave">✈️ India leave</button><button type="button" data-v="offshore">⚓ Offshore</button><button type="button" data-v="workday">💼 Extra working day</button></div>
   <div class="hint" id="pHint"></div>
   <div class="two"><div><label for="pStart">From</label><input type="date" id="pStart" required></div><div><label for="pEnd">To</label><input type="date" id="pEnd" required></div></div>
   <label for="pNotes">Notes</label><input id="pNotes" autocomplete="off" placeholder="e.g. flight SV 762, vessel name">
@@ -360,7 +362,7 @@ textarea{min-height:80px;resize:vertical}
   <div class="tog"><span>Bedtime notification<br><span class="meta">30 min before bedtime</span></span><input type="checkbox" id="stBedRem"></div>
   <div class="tog"><span>Family is in Saudi<br><span class="meta">Turns on daily family time and suggests it each evening</span></span><input type="checkbox" id="stFam"></div>
   <div class="tog"><span>Connection<br><span class="meta" id="connInfo"></span></span><button type="button" class="btn sm" id="openConn">Change</button></div>
-  <div class="hint" style="margin-top:12px">App version 7 · 15 Nov 2026</div>
+  <div class="hint" style="margin-top:12px">App version 8 · 15 Nov 2026</div>
   <div class="row" style="margin-top:16px;justify-content:flex-end"><button type="button" class="btn" data-close>Cancel</button><button class="btn p">Save</button></div>
 </form></div>
 
@@ -399,11 +401,16 @@ const addD=(s,n)=>{const d=pd(s);d.setDate(d.getDate()+n);return ymd(d)};
 const toMin=s=>{if(!s)return null;const[h,m]=String(s).split(":").map(Number);return h*60+(m||0)};
 const fromMin=m=>pad(Math.floor(m/60)%24)+":"+pad(m%60);
 const weekStart=s=>{const d=pd(s);return addD(s,-d.getDay())};
-function periodOn(ds){const l=D.periods.filter(p=>p.start<=ds&&ds<=p.end);return l.find(p=>p.kind==="leave")||l[0]||null}
+const PK={leave:{n:"India leave",i:"✈️"},personal:{n:"Personal leave",i:"🌴"},holiday:{n:"Office holiday",i:"🎉"},workday:{n:"Extra working day",i:"💼"},offshore:{n:"Offshore",i:"⚓"}};
+const PRI=["leave","personal","offshore","holiday","workday"];
+function periodOn(ds){const l=D.periods.filter(p=>p.start<=ds&&ds<=p.end);for(const k of PRI){const f=l.find(p=>p.kind===k);if(f)return f}return l[0]||null}
 function dayInfo(ds){
   const p=periodOn(ds),d=pd(ds),dow=d.getDay();
   if(p&&p.kind==="leave")return{kind:"leave",work:false,label:"India leave",color:"var(--leave)"};
+  if(p&&p.kind==="personal")return{kind:"off",work:false,label:"Personal leave"+(p.notes?" · "+p.notes:""),color:"var(--personal)",pk:"personal"};
   if(p&&p.kind==="offshore")return{kind:"offshore",work:true,label:"Offshore",color:"var(--offshore)"};
+  if(p&&p.kind==="holiday")return{kind:"off",work:false,label:"Office holiday"+(p.notes?" · "+p.notes:""),color:"var(--mut)",pk:"holiday"};
+  if(p&&p.kind==="workday")return{kind:"work",work:true,label:"Extra working day"+(p.notes?" · "+p.notes:""),color:"var(--work)",pk:"workday"};
   if(dow===5)return{kind:"off",work:false,label:"Friday off",color:"var(--mut)"};
   if(dow===6){const n=Math.ceil(d.getDate()/7);if(n===2||n===4)return{kind:"off",work:false,label:(n===2?"2nd":"4th")+" Saturday off",color:"var(--mut)"};return{kind:"work",work:true,label:"Working Saturday",color:"var(--work)"}}
   return{kind:"work",work:true,label:"Working day",color:"var(--work)"};
@@ -593,7 +600,7 @@ function renderCal(){
     $("calBody").innerHTML=[...Array(7)].map((_,i)=>{const ds=addD(ws,i),inf=dayInfo(ds),ev=eventsOn(ds),o=inf.work?office(ds):null;return`<div class="wkday"><h4><span>${dayName(ds,{weekday:"long",day:"numeric",month:"short"})} ${ds===t?'<span class="pill" style="background:var(--red);color:#fff">Today</span>':""}</span><button class="btn sm" data-day="${ds}">Open</button></h4><div class="meta"><span class="pill"><i style="background:${inf.color}"></i>${esc(inf.label)}${o?" · "+fmtT(o.a)+"–"+fmtT(o.l):""}</span></div><ul class="sched sm">${ev.map(e=>`<li class="${ds<t||(ds===t&&evEnd(e)<=nowMin())?"past":""}" data-e="${esc(e.id)}">${tCell(e)}<div><div class="ttl">${esc(e.title)}</div></div><span class="bar" style="background:${evColor(e)}"></span></li>`).join("")}</ul></div>`}).join("");
   }
   const ps=D.periods.slice().sort((a,b)=>b.start.localeCompare(a.start));
-  $("periodList").innerHTML=ps.length?ps.map(p=>`<div class="tcard" data-p="${esc(p.id)}" style="cursor:pointer"><span style="font-size:22px">${p.kind==="leave"?"✈️":"⚓"}</span><div class="body"><div class="ttl">${p.kind==="leave"?"India leave":"Offshore"}: ${dayName(p.start)} – ${dayName(p.end)}</div><div class="meta">${Math.round((pd(p.end)-pd(p.start))/864e5)+1} days${p.notes?" · "+esc(p.notes):""}${p.kind==="offshore"?" · every day is a working day":""}</div></div></div>`).join(""):`<div class="meta">No trips added. Leave days are skipped when fitting habits; offshore makes every day a working day.</div>`;
+  $("periodList").innerHTML=ps.length?ps.map(p=>{const k=PK[p.kind]||PK.leave,n=Math.round((pd(p.end)-pd(p.start))/864e5)+1;return`<div class="tcard" data-p="${esc(p.id)}" style="cursor:pointer"><span style="font-size:22px">${k.i}</span><div class="body"><div class="ttl">${k.n}: ${p.start===p.end?dayName(p.start):dayName(p.start)+" – "+dayName(p.end)}</div><div class="meta">${n} day${n>1?"s":""}${p.notes?" · "+esc(p.notes):""}${p.kind==="offshore"?" · every day is a working day":""}</div></div></div>`}).join(""):`<div class="meta">Nothing added yet. Tap a day in the calendar to mark it as a holiday or leave.</div>`;
 }
 function renderHabits(){
   const t=today(),ws=weekStart(t),days=[...Array(7)].map((_,i)=>addD(ws,i)),act=D.habits.filter(h=>h.active);
@@ -667,15 +674,17 @@ $("fS").addEventListener("submit",e=>{e.preventDefault();const d=$("sDate").valu
 $("sDel").addEventListener("click",e=>editS&&del("Sleep",editS.id,"ovS",e.currentTarget));
 
 // Period
-function openP(p,kind){editP=p||null;pKind=p?.kind||kind||"leave";setSeg("pKind",pKind);pHint();$("pStart").value=p?.start||today();$("pEnd").value=p?.end||addD(today(),pKind==="leave"?14:21);$("pNotes").value=p?.notes||"";$("pDel").style.visibility=p?"visible":"hidden";close("ovMenu");open("ovP")}
-function pHint(){$("fPh").textContent=pKind==="leave"?"India leave":"Offshore trip";$("pHint").textContent=pKind==="leave"?"These days show as leave; no office hours and no habits suggested.":"Every day in this range is a working day, Fridays and Saturdays included."}
+function openP(p,kind,dsDefault){editP=p||null;pKind=p?.kind||kind||"leave";setSeg("pKind",pKind);pHint();$("pStart").value=p?.start||dsDefault||today();$("pEnd").value=p?.end||(p?"":(pKind==="leave"?addD(dsDefault||today(),14):pKind==="offshore"?addD(dsDefault||today(),21):dsDefault||today()));$("pNotes").value=p?.notes||"";$("pDel").style.visibility=p?"visible":"hidden";close("ovMenu");open("ovP")}
+function pHint(){const H={leave:"These days show as India leave: no office hours and no habits suggested.",offshore:"Every day in this range is a working day, Fridays and Saturdays included.",holiday:"The office is closed (e.g. National Day, Eid). Add the holiday name in Notes.",personal:"Your own day(s) off. No office hours; habits can still be fitted in.",workday:"You're working on a day that's normally off (e.g. a Friday or 2nd/4th Saturday)."};$("fPh").textContent=PK[pKind].n;$("pHint").textContent=H[pKind]}
 $("pKind").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(b){pKind=b.dataset.v;setSeg("pKind",pKind);pHint()}});
 $("fP").addEventListener("submit",e=>{e.preventDefault();if($("pEnd").value<$("pStart").value)return toast("End date is before the start date.");save("Periods",{id:editP?.id||"",kind:pKind,start:$("pStart").value,end:$("pEnd").value,notes:$("pNotes").value.trim()},"ovP")});
 $("pDel").addEventListener("click",e=>editP&&del("Periods",editP.id,"ovP",e.currentTarget));
 
 // Day detail
 function openDay(ds){const inf=dayInfo(ds),ev=eventsOn(ds),o=inf.work?office(ds):null,due=D.tasks.filter(x=>!x.done&&x.due&&x.due.slice(0,10)===ds);
-  $("dayBox").innerHTML=`<h2>${dayName(ds,{weekday:"long",day:"numeric",month:"long"})}</h2><span class="pill"><i style="background:${inf.color}"></i>${esc(inf.label)}</span>${o?`<div class="row" style="margin-top:12px"><span class="ttl">Office ${fmtT(o.a)} – ${fmtT(o.l)}</span><span class="meta">Start</span><input type="time" id="dayArr" value="${fromMin(o.a)}" style="width:130px" data-ds="${ds}"></div>`:""}<ul class="sched sm" style="margin-top:10px">${ev.map(e=>`<li class="${ds<today()||(ds===today()&&evEnd(e)<=nowMin())?"past":""}" data-e="${esc(e.id)}">${tCell(e)}<div><div class="ttl">${esc(e.title)}</div>${e.notes?`<div class="meta">${esc(e.notes)}</div>`:""}</div><span class="bar" style="background:${evColor(e)}"></span></li>`).join("")||'<li style="cursor:default"><div></div><div class="meta">Nothing scheduled</div></li>'}</ul>${due.length?`<h2 style="font-size:16px;margin-top:12px">Tasks due</h2>${due.map(card).join("")}`:""}<div class="row" style="margin-top:14px;justify-content:space-between"><button class="btn p" data-addev="${ds}">+ Schedule item</button><button class="btn" data-close>Close</button></div>`;open("ovD")}
+  const one=D.periods.find(p=>p.start===ds&&p.end===ds&&["holiday","personal","workday"].includes(p.kind)),multi=!one&&periodOn(ds);
+  $("dayBox").innerHTML=`<h2>${dayName(ds,{weekday:"long",day:"numeric",month:"long"})}</h2><span class="pill"><i style="background:${inf.color}"></i>${esc(inf.label)}</span>
+  ${multi?`<div class="meta" style="margin-top:8px">Part of ${PK[multi.kind]?.n||"a trip"} (${dayName(multi.start)} – ${dayName(multi.end)}). <button class="btn sm" data-p="${esc(multi.id)}">Edit</button></div>`:`<label>This day is</label><div class="seg" id="dayType" data-ds="${ds}"><button type="button" data-v="" class="${one?"":"on"}">Normal</button><button type="button" data-v="holiday" class="${one&&one.kind==="holiday"?"on":""}">🎉 Office holiday</button><button type="button" data-v="personal" class="${one&&one.kind==="personal"?"on":""}">🌴 Personal leave</button><button type="button" data-v="workday" class="${one&&one.kind==="workday"?"on":""}">💼 Working</button></div>${one&&one.notes?`<div class="meta">${esc(one.notes)}</div>`:""}`}${o?`<div class="row" style="margin-top:12px"><span class="ttl">Office ${fmtT(o.a)} – ${fmtT(o.l)}</span><span class="meta">Start</span><input type="time" id="dayArr" value="${fromMin(o.a)}" style="width:130px" data-ds="${ds}"></div>`:""}<ul class="sched sm" style="margin-top:10px">${ev.map(e=>`<li class="${ds<today()||(ds===today()&&evEnd(e)<=nowMin())?"past":""}" data-e="${esc(e.id)}">${tCell(e)}<div><div class="ttl">${esc(e.title)}</div>${e.notes?`<div class="meta">${esc(e.notes)}</div>`:""}</div><span class="bar" style="background:${evColor(e)}"></span></li>`).join("")||'<li style="cursor:default"><div></div><div class="meta">Nothing scheduled</div></li>'}</ul>${due.length?`<h2 style="font-size:16px;margin-top:12px">Tasks due</h2>${due.map(card).join("")}`:""}<div class="row" style="margin-top:14px;justify-content:space-between"><button class="btn p" data-addev="${ds}">+ Schedule item</button><button class="btn" data-close>Close</button></div>`;open("ovD")}
 async function setArrive(ds,v){if(!v)return;const ex=D.days.find(x=>x.date===ds);api("saveRow","Days",{id:ex?ex.id:ds,date:ds,arrive:v})}
 
 // Settings
@@ -789,7 +798,7 @@ Open tasks: ${tasks}
 HOW TO WRITE IT (plain text cells, new id for each new row):
 - Events tab columns: id, date (YYYY-MM-DD), start (HH:MM 24h), end, title, type (work|personal|family), remind (15), notes, updated, source (claude), notified (blank), habit (blank)
 - Tasks tab columns: id, title, notes, type, due (YYYY-MM-DDTHH:MM or blank), remind (blank), quadrant (UI urgent+important | NUI important | UNI urgent | NUNI neither), suggested, done (FALSE), created, updated, source (claude), notified (blank)
-- India leave / offshore trips go in Periods: id, kind (leave|offshore), start, end, notes, updated
+- Days off and trips go in Periods: id, kind (holiday = office closed | personal = my own leave day | leave = India leave | offshore = offshore trip, every day working | workday = working on a normal off day), start, end, notes, updated
 Fit personal items outside office hours and avoid clashes. Show me the plan in a short list first, then write it once I confirm.`;
 }
 function claudeLink(){return"claude://claude.ai/new?q="+encodeURIComponent(claudePrompt())}
@@ -812,9 +821,12 @@ $("planWk").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if
 $("suggestBtn").addEventListener("click",()=>{const ws=addD(weekStart(today()),planOff*7);placements=suggestWeek(ws,today(),nowMin());renderPlan();if(!placements.length)$("planBox").innerHTML=`<div class="empty">Nothing to add — your active habits are already scheduled for that week, or there's no free slot.</div>`});
 document.addEventListener("click",async e=>{
   const a=e.target.closest("[data-act]");
-  if(a){const k=a.dataset.act;close("ovMenu");if(k==="task")openT();else if(k==="event")openE();else if(k==="habit")openH();else if(k==="sleep")openS();else if(k==="period")openP(null,a.dataset.kind);else if(k==="plan")open("ovPlan");else if(k==="voice"){open("ovPlan");startMic()}return}
+  if(a){const k=a.dataset.act;close("ovMenu");if(k==="task")openT();else if(k==="event")openE();else if(k==="habit")openH();else if(k==="sleep")openS();else if(k==="period"){close("ovD");openP(null,a.dataset.kind,a.dataset.ds)}else if(k==="plan")open("ovPlan");else if(k==="voice"){open("ovPlan");startMic()}return}
   if(e.target.id==="connNow"){openConn();return}
   if(e.target.closest("#togglePast")){showPast=!showPast;render();return}
+  const dt=e.target.closest("#dayType [data-v]");if(dt){const ds=dt.parentElement.dataset.ds,k=dt.dataset.v,one=D.periods.find(p=>p.start===ds&&p.end===ds&&["holiday","personal","workday"].includes(p.kind));
+    if(!k){if(one)api("deleteRow","Periods",one.id)}else if(one)api("saveRow","Periods",{id:one.id,kind:k});else api("saveRow","Periods",{kind:k,start:ds,end:ds,notes:""});
+    openDay(ds);if(k==="holiday"&&!one)toast("Marked as office holiday. Tap the day again → Edit in the list below to add its name.");return}
   const tb=e.target.closest("[data-tab]");if(tb){showTab(tb.dataset.tab);return}
   const hl=e.target.closest("[data-hlog]");if(hl){toggleLog(hl.dataset.hlog,hl.dataset.ds||today());return}
   const pi=e.target.closest("[data-pi]");if(pi){const p=placements[Number(pi.dataset.pi)];p.on=!p.on;renderPlan();return}
@@ -827,7 +839,7 @@ document.addEventListener("click",async e=>{
   const dy=e.target.closest("[data-day]");if(dy){openDay(dy.dataset.day);return}
   const h=e.target.closest("[data-h]");if(h){openH(D.habits.find(x=>x.id===h.dataset.h));return}
   const s=e.target.closest("[data-s]");if(s){openS(D.sleep.find(x=>x.id===s.dataset.s));return}
-  const p=e.target.closest("[data-p]");if(p){openP(D.periods.find(x=>x.id===p.dataset.p));return}
+  const p=e.target.closest("[data-p]");if(p){close("ovD");openP(D.periods.find(x=>x.id===p.dataset.p));return}
 });
 document.addEventListener("change",async e=>{
   if(e.target.id==="arrIn"){setArrive(today(),e.target.value);return}
