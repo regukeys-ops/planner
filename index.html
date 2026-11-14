@@ -305,6 +305,7 @@ textarea{min-height:80px;resize:vertical}
   <label for="eRem">Notification</label>
   <select id="eRem"><option value="-1">None</option><option value="0">At start time</option><option value="10">10 min before</option><option value="15">15 min before</option><option value="30">30 min before</option><option value="60">1 hour before</option></select>
   <label for="eNotes">Notes</label><textarea id="eNotes" style="min-height:56px"></textarea>
+  <div class="hint" id="eSrc"></div>
   <div class="row" style="margin-top:16px;justify-content:space-between"><button type="button" class="btn" id="eDel">Delete</button><div class="row"><button type="button" class="btn" data-close>Cancel</button><button class="btn p">Save</button></div></div>
 </form></div>
 
@@ -362,7 +363,9 @@ textarea{min-height:80px;resize:vertical}
   <div class="tog"><span>Bedtime notification<br><span class="meta">30 min before bedtime</span></span><input type="checkbox" id="stBedRem"></div>
   <div class="tog"><span>Family is in Saudi<br><span class="meta">Turns on daily family time and suggests it each evening</span></span><input type="checkbox" id="stFam"></div>
   <div class="tog"><span>Connection<br><span class="meta" id="connInfo"></span></span><button type="button" class="btn sm" id="openConn">Change</button></div>
-  <div class="hint" style="margin-top:12px">App version 8 · 15 Nov 2026</div>
+  <div class="tog"><span>Outlook meetings<br><span class="meta" id="olInfo"></span></span><button type="button" class="btn sm" id="olSync">Sync now</button></div>
+  <div class="tog"><span>Hide meeting titles<br><span class="meta">Show Outlook meetings only as "Work meeting"</span></span><input type="checkbox" id="stOlPriv"></div>
+  <div class="hint" style="margin-top:12px">App version 9 · 15 Nov 2026</div>
   <div class="row" style="margin-top:16px;justify-content:flex-end"><button type="button" class="btn" data-close>Cancel</button><button class="btn p">Save</button></div>
 </form></div>
 
@@ -556,7 +559,7 @@ function renderToday(t,info){
      if(!r.past&&!lineDone&&!r.cur&&pastN){h+=`<li class="nowline">Now · ${fmtT(nm)}</li>`;lineDone=true}
      if(r.cur)lineDone=true;
      const pct=r.cur?Math.round((nm-toMin(e.start))/Math.max(1,evEnd(e)-toMin(e.start))*100):0;
-     h+=`<li class="${r.past?"past":""} ${r.cur?"cur":""}" data-e="${esc(e.id)}">${tCell(e)}<div><div class="ttl">${r.cur?'<span class="nowpill">NOW</span>':""}${esc(e.title)}</div>${e.notes?`<div class="meta">${esc(e.notes)}</div>`:""}${r.cur?`<div class="prog"><i style="width:${pct}%"></i></div><div class="meta">${evEnd(e)-nm} min left</div>`:""}</div><span class="bar" style="background:${evColor(e)}"></span></li>`});
+     h+=`<li class="${r.past?"past":""} ${r.cur?"cur":""}" data-e="${esc(e.id)}">${tCell(e)}<div><div class="ttl">${r.cur?'<span class="nowpill">NOW</span>':""}${esc(e.title)}</div>${e.source==="outlook"||e.notes?`<div class="meta">${e.source==="outlook"?"📅 Outlook"+(e.notes?" · ":""):""}${esc(e.notes||"")}</div>`:""}${r.cur?`<div class="prog"><i style="width:${pct}%"></i></div><div class="meta">${evEnd(e)-nm} min left</div>`:""}</div><span class="bar" style="background:${evColor(e)}"></span></li>`});
    if(te.length&&!lineDone&&pastN===te.length)h+=`<li class="nowline">Now · ${fmtT(nm)} · all done for today</li>`;
    $("todaySched").innerHTML=te.length?h:`<div class="empty">Nothing scheduled. Tap + to add, or let the Habits tab fit your activities in.</div>`;}
   $("todayTasks").innerHTML=urg.length?urg.map(card).join(""):`<div class="empty">Nothing urgent. Nice.</div>`;
@@ -648,7 +651,7 @@ $("fT").addEventListener("submit",e=>{e.preventDefault();save("Tasks",{id:editT?
 $("tDel").addEventListener("click",e=>editT&&del("Tasks",editT.id,"ovT",e.currentTarget));
 
 // Event
-function openE(ev,date){editE=ev||null;$("fEh").textContent=ev?"Edit schedule item":"New schedule item";$("eTitle").value=ev?.title||"";$("eDate").value=ev?.date||date||today();$("eStart").value=ev?.start||"";$("eEnd").value=ev?.end||"";$("eType").value=ev?.type||"personal";$("eRem").value=String(ev?.remind??15);$("eNotes").value=ev?.notes||"";$("eDel").style.visibility=ev?"visible":"hidden";close("ovD");open("ovE")}
+function openE(ev,date){editE=ev||null;$("fEh").textContent=ev?"Edit schedule item":"New schedule item";$("eTitle").value=ev?.title||"";$("eDate").value=ev?.date||date||today();$("eStart").value=ev?.start||"";$("eEnd").value=ev?.end||"";$("eType").value=ev?.type||"personal";$("eRem").value=String(ev?.remind??15);$("eNotes").value=ev?.notes||"";$("eDel").style.visibility=ev?"visible":"hidden";$("eSrc").textContent=ev&&ev.source==="outlook"?"📅 From your Outlook calendar. Change it in Outlook — edits here are replaced at the next hourly sync.":"";close("ovD");open("ovE")}
 $("fE").addEventListener("submit",e=>{e.preventDefault();save("Events",{id:editE?.id||"",title:$("eTitle").value.trim(),date:$("eDate").value,start:$("eStart").value,end:$("eEnd").value,type:$("eType").value,remind:Number($("eRem").value),notes:$("eNotes").value.trim(),habit:editE?.habit||""},"ovE")});
 $("eDel").addEventListener("click",e=>editE&&del("Events",editE.id,"ovE",e.currentTarget));
 
@@ -688,13 +691,13 @@ function openDay(ds){const inf=dayInfo(ds),ev=eventsOn(ds),o=inf.work?office(ds)
 async function setArrive(ds,v){if(!v)return;const ex=D.days.find(x=>x.date===ds);api("saveRow","Days",{id:ex?ex.id:ds,date:ds,arrive:v})}
 
 // Settings
-function openSet(){$("connInfo").textContent=CFG.url?"Connected to your Google Sheet":"Not connected";const s=S();setSeg("themeSeg",localTheme()||s.theme||"auto");$("stStart").value=s.workStart;$("stHours").value=s.workHours;$("stWake").value=s.wake;$("stBed").value=s.bedtime;$("stTarget").value=s.sleepTarget;$("stBedRem").checked=s.bedRemind==="on";$("stFam").checked=s.family==="on";open("ovSet")}
+function openSet(){$("connInfo").textContent=CFG.url?"Connected to your Google Sheet":"Not connected";$("olInfo").textContent=D.outlook?(D.settings.outlookSynced?"Last sync "+D.settings.outlookSynced:"Set up — not synced yet"):"Not set up yet";$("olSync").style.display=D.outlook?"":"none";$("stOlPriv").checked=D.settings.outlookPrivate==="on";const s=S();setSeg("themeSeg",localTheme()||s.theme||"auto");$("stStart").value=s.workStart;$("stHours").value=s.workHours;$("stWake").value=s.wake;$("stBed").value=s.bedtime;$("stTarget").value=s.sleepTarget;$("stBedRem").checked=s.bedRemind==="on";$("stFam").checked=s.family==="on";open("ovSet")}
 const localTheme=()=>{try{return localStorage.getItem("theme")}catch(e){return null}};
 function applyTheme(v){if(v&&v!=="auto")document.documentElement.dataset.theme=v;else delete document.documentElement.dataset.theme;try{localStorage.setItem("theme",v||"auto")}catch(e){}drawTL()}
 $("themeSeg").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(b){setSeg("themeSeg",b.dataset.v);applyTheme(b.dataset.v)}});
 $("fSet").addEventListener("submit",async e=>{e.preventDefault();
   const th=document.querySelector("#themeSeg .on")?.dataset.v||"auto",fam=$("stFam").checked?"on":"off";
-  const vals={theme:th,workStart:$("stStart").value||"08:00",workHours:$("stHours").value||"9",wake:$("stWake").value||"05:30",bedtime:$("stBed").value||"22:30",sleepTarget:$("stTarget").value||"7.5",bedRemind:$("stBedRem").checked?"on":"off",family:fam};
+  const vals={theme:th,workStart:$("stStart").value||"08:00",workHours:$("stHours").value||"9",wake:$("stWake").value||"05:30",bedtime:$("stBed").value||"22:30",sleepTarget:$("stTarget").value||"7.5",bedRemind:$("stBedRem").checked?"on":"off",family:fam,outlookPrivate:$("stOlPriv").checked?"on":"off"};
   try{await api("saveRows","Settings",Object.keys(vals).map(k=>({id:k,value:vals[k]})));
     const fh=D.habits.find(h=>h.id==="family"||/family/i.test(h.name));
     if(fam==="on"&&!fh)await api("saveRow","Habits",{id:"family",name:"Family time",perWeek:7,duration:90,pref:"evening",color:"#ef6c3a",active:true,source:"default"});
@@ -734,6 +737,7 @@ $("fConn").addEventListener("submit",async e=>{e.preventDefault();const u=$("cUr
   catch(err){Object.assign(CFG,old);$("cMsg").textContent=err instanceof ServerError?err.message:"Couldn't reach it. Check your internet and the link."}
 });
 $("openConn").addEventListener("click",openConn);
+$("olSync").addEventListener("click",async()=>{const b=$("olSync");b.disabled=true;b.textContent="Syncing…";try{const m=await remote("syncOutlook",[]);toast("📅 "+esc(m));await load();$("olInfo").textContent="Last sync "+(D.settings.outlookSynced||"just now")}catch(e){toast("Outlook sync failed: "+esc(e.message))}b.disabled=false;b.textContent="Sync now"});
 
 /* ---------- Voice → Claude ---------- */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -799,7 +803,7 @@ HOW TO WRITE IT (plain text cells, new id for each new row):
 - Events tab columns: id, date (YYYY-MM-DD), start (HH:MM 24h), end, title, type (work|personal|family), remind (15), notes, updated, source (claude), notified (blank), habit (blank)
 - Tasks tab columns: id, title, notes, type, due (YYYY-MM-DDTHH:MM or blank), remind (blank), quadrant (UI urgent+important | NUI important | UNI urgent | NUNI neither), suggested, done (FALSE), created, updated, source (claude), notified (blank)
 - Days off and trips go in Periods: id, kind (holiday = office closed | personal = my own leave day | leave = India leave | offshore = offshore trip, every day working | workday = working on a normal off day), start, end, notes, updated
-Fit personal items outside office hours and avoid clashes. Show me the plan in a short list first, then write it once I confirm.`;
+Rows with source "outlook" come from my Outlook calendar — don't edit or delete them. Fit personal items outside office hours and avoid clashes. Show me the plan in a short list first, then write it once I confirm.`;
 }
 function claudeLink(){return"claude://claude.ai/new?q="+encodeURIComponent(claudePrompt())}
 $("sendClaude").addEventListener("click",()=>{if(!$("planIn").value.trim()){$("micHint").textContent="Say or type your plan first.";return}if(listening&&rec)rec.stop();

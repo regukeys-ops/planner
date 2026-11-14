@@ -1,5 +1,5 @@
 /* Regu's Planner service worker: opens offline, but always fetches the newest app when online. */
-const VERSION = 'v8';
+const VERSION = 'v9';
 const CACHE = 'planner-' + VERSION;
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-512.png'];
 self.addEventListener('install', e => {
