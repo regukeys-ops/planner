@@ -1,5 +1,5 @@
 /* Regu's Planner service worker: lets the app open without a connection. */
-const CACHE = 'planner-v4';
+const CACHE = 'planner-v6';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

@@ -48,11 +48,25 @@ h1{font-size:clamp(28px,6vw,40px);line-height:1.05;margin:2px 0 0;font-weight:80
 .nowrow b{font-size:12px;min-width:38px;color:var(--mut);text-transform:none}
 .nowrow.hot{background:color-mix(in srgb,var(--red) 14%,var(--card))}.nowrow.hot b{color:var(--red)}
 .sched{list-style:none;margin:0;padding:0}
-.sched li{display:grid;grid-template-columns:78px 1fr auto;gap:12px;padding:12px 0;border-top:1px solid var(--line);align-items:start;cursor:pointer}
+.sched li{display:grid;grid-template-columns:92px minmax(0,1fr) auto;gap:10px;padding:12px 0;border-top:1px solid var(--line);align-items:start;cursor:pointer}
 .sched li:first-child{border-top:0}
-.sched .t{font-size:22px;font-weight:800;font-stretch:110%;line-height:1;white-space:nowrap}
+.sched .t{font-size:21px;font-weight:800;font-stretch:105%;line-height:1;white-space:nowrap;font-variant-numeric:tabular-nums}
+.sched .t .ap{font-size:12px;font-weight:700;margin-left:3px;color:var(--mut)}
+.sched.sm .t{font-size:17px}.sched.sm li{grid-template-columns:82px minmax(0,1fr) auto}
 .sched .t small{display:block;font-size:12px;font-weight:500;color:var(--mut);margin-top:4px}
-.sched li.past{opacity:.45}.sched li.cur .t{color:var(--red)}
+.sched li.past{opacity:.5}.sched li.past .ttl{text-decoration:line-through;text-decoration-thickness:1.5px}
+.sched li.past .ttl::before{content:"✓";color:var(--ok);display:inline-block;margin-right:6px;text-decoration:none}
+.sched li.cur{background:color-mix(in srgb,var(--red) 11%,var(--card));border-radius:12px;padding:12px 10px;margin:4px -10px;border-top-color:transparent}
+.sched li.cur+li{border-top-color:transparent}
+.sched li.cur .t{color:var(--red)}
+.nowpill{display:inline-block;font-size:11px;font-weight:800;color:#fff;background:var(--red);border-radius:6px;padding:1px 6px;margin-right:6px;vertical-align:2px}
+.prog{height:5px;border-radius:3px;background:color-mix(in srgb,var(--red) 22%,transparent);margin-top:8px;overflow:hidden}.prog i{display:block;height:100%;background:var(--red)}
+.sched li.nowline{display:flex;align-items:center;gap:8px;color:var(--red);font-weight:800;font-size:13px;padding:6px 0;border-top:0;cursor:default}
+.sched li.nowline::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--red);flex:none}
+.sched li.nowline::after{content:"";flex:1;height:2px;background:var(--red);opacity:.6}
+.sched li.nowline+li{border-top-color:transparent}
+.sched li.more{display:flex;justify-content:space-between;align-items:center;color:var(--mut);font-weight:600;font-size:14px;padding:10px 0}
+.sched li.more b{color:var(--ok)}
 .bar{width:4px;border-radius:2px;align-self:stretch}
 .ttl{font-weight:600}.meta{font-size:13px;color:var(--mut)}
 .tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:20px;color:#fff;margin-right:6px;white-space:nowrap}
@@ -76,7 +90,7 @@ h1{font-size:clamp(28px,6vw,40px);line-height:1.05;margin:2px 0 0;font-weight:80
 .btn:disabled{opacity:.5}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--work);outline-offset:2px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.seg{display:inline-flex;background:var(--soft);border-radius:12px;padding:3px;gap:2px}
+.seg{display:inline-flex;flex-wrap:wrap;background:var(--soft);border-radius:12px;padding:3px;gap:2px}
 .seg button{border:0;background:none;color:var(--mut);font:600 14px Archivo,system-ui,sans-serif;padding:8px 14px;min-height:38px;border-radius:9px;cursor:pointer}
 .seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
@@ -152,7 +166,7 @@ textarea{min-height:80px;resize:vertical}
 .offline{background:color-mix(in srgb,var(--leave) 18%,var(--card));color:var(--ink);border-radius:10px;padding:6px 10px;display:inline-block}
 @media(prefers-reduced-motion:reduce){.mic.on{animation:none}}
 @media(prefers-reduced-motion:reduce){.view.on,.sheet,.toast.on{animation:none}}
-@media(max-width:600px){.mx{grid-template-columns:minmax(0,1fr)}.sched li{grid-template-columns:66px 1fr auto}.sched .t{font-size:19px}.cal .c{min-height:52px;font-size:13px}.stat b{font-size:22px}}
+@media(max-width:600px){.mx{grid-template-columns:minmax(0,1fr)}.sched li{grid-template-columns:84px minmax(0,1fr) auto}.sched .t{font-size:19px}.cal .c{min-height:52px;font-size:13px}.stat b{font-size:22px}}
 </style>
 </head>
 <body>
@@ -301,7 +315,8 @@ textarea{min-height:80px;resize:vertical}
     <div><label for="hDur">Minutes each time</label><select id="hDur"></select></div>
   </div>
   <label>Preferred time</label>
-  <div class="seg" id="hPref"><button type="button" data-v="morning">Morning</button><button type="button" data-v="evening">Evening</button><button type="button" data-v="any">Any</button></div>
+  <div class="seg" id="hPref"><button type="button" data-v="morning">Morning</button><button type="button" data-v="evening">Evening</button><button type="button" data-v="any">Any</button><button type="button" data-v="flex">No fixed time</button></div>
+  <div class="hint">"No fixed time" = just tick it off each day (like calls home); it won't be put on your schedule.</div>
   <label>Colour</label><div class="sw" id="hCol"></div>
   <div class="tog"><span>Active</span><input type="checkbox" id="hAct" checked></div>
   <div class="row" style="margin-top:16px;justify-content:space-between"><button type="button" class="btn" id="hDel">Delete</button><div class="row"><button type="button" class="btn" data-close>Cancel</button><button class="btn p">Save</button></div></div>
@@ -409,7 +424,7 @@ function findSlot(ds,dur,pref,extra,minStart){
 function suggestWeek(ws,today,nowMinutes){
   const days=[...Array(7)].map((_,i)=>addD(ws,i)),out=[];
   const cand=days.filter(ds=>dayInfo(ds).kind!=="leave"&&ds>=today);
-  D.habits.filter(h=>h.active).forEach((h,hi)=>{
+  D.habits.filter(h=>h.active&&h.pref!=="flex").forEach((h,hi)=>{
     const has=ds=>D.events.some(e=>e.habit===h.id&&e.date===ds)||out.some(x=>x.habit===h.id&&x.ds===ds);
     const already=days.filter(ds=>D.events.some(e=>e.habit===h.id&&e.date===ds)).length;
     const need=Math.max(0,h.perWeek-already),pool=cand.filter(ds=>!has(ds));
@@ -482,6 +497,8 @@ function syncLabel(online){
   else el.textContent="Synced "+new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
 }
 const fmtT=s=>{if(s===null||s===undefined||s==="")return"";const m=typeof s==="number"?s:toMin(s);const h=Math.floor(m/60)%24,mm=m%60;return(h%12||12)+":"+pad(mm)+(h<12?" am":" pm")};
+const tBig=s=>{if(s===null||s===undefined||s==="")return"";const m=typeof s==="number"?s:toMin(s),h=Math.floor(m/60)%24;return`${h%12||12}:${pad(m%60)}<span class="ap">${h<12?"am":"pm"}</span>`};
+const tCell=e=>`<div class="t">${tBig(e.start)}${e.end?`<small>to ${fmtT(e.end)}</small>`:""}</div>`;
 const dayName=(ds,o)=>pd(ds).toLocaleDateString(undefined,o||{weekday:"short",day:"numeric",month:"short"});
 const fmtDT=s=>{if(!s)return"";const d=new Date(s);if(isNaN(d))return"";const t=today(),k=ymd(d);return(k===t?"Today":k===addD(t,1)?"Tomorrow":dayName(k))+" "+fmtT(pad(d.getHours())+":"+pad(d.getMinutes()))};
 const today=()=>ymd(new Date());
@@ -491,7 +508,7 @@ const TL={work:"Official",personal:"Personal",family:"Family"};
 const evColor=e=>{if(e.habit){const h=D.habits.find(x=>x.id===e.habit);if(h)return h.color}return TC[e.type]||TC.personal};
 const tag=t=>`<span class="tag" style="background:${TC[t]||TC.personal}">${TL[t]||"Personal"}</span>`;
 const isOver=t=>t.due&&!t.done&&new Date(t.due)<new Date();
-let ready=false,aiOn=false,calMode="month",calRef=today(),fType="",editT=null,editE=null,editH=null,editS=null,editP=null,selQ=null,sugQ=null,planDraft=null,placements=[],planOff=0,hPref="evening",hColor="#12a150",sQual=0,pKind="leave";
+let showPast=false,ready=false,aiOn=false,calMode="month",calRef=today(),fType="",editT=null,editE=null,editH=null,editS=null,editP=null,selQ=null,sugQ=null,planDraft=null,placements=[],planOff=0,hPref="evening",hColor="#12a150",sQual=0,pKind="leave";
 
 function ring(p,color,size,label){const r=(size-8)/2,c=2*Math.PI*r,v=Math.max(0,Math.min(1,p));return`<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--line)" stroke-width="7"/>${v>0?`<circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${c*v} ${c}" transform="rotate(-90 ${size/2} ${size/2})" style="transition:stroke-dasharray .5s"/>`:""}<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-size="${size/4.2}" font-weight="800" fill="var(--ink)" font-family="Archivo,system-ui,sans-serif">${esc(label)}</text></svg>`}
 const logged=(hid,ds)=>D.habitLog.find(l=>l.habit===hid&&l.date===ds);
@@ -519,10 +536,21 @@ function renderToday(t,info){
   if(urg.length)nw+=`<div class="nowrow hot"><b>Do</b><span>${urg.length} urgent: ${urg.slice(0,3).map(x=>esc(x.title)).join(" · ")}</span></div>`;
   $("now").innerHTML=nw;
   // habits today: habits scheduled today, else all active habits
-  const ws=weekStart(t),sched=D.habits.filter(h=>h.active&&te.some(e=>e.habit===h.id)),list=sched.length?sched:D.habits.filter(h=>h.active);
-  $("habSum").textContent=sched.length?"scheduled today":"tap when done";
+  const ws=weekStart(t),act=D.habits.filter(h=>h.active),isS=h=>te.some(e=>e.habit===h.id);
+  const list=act.filter(isS).concat(act.filter(h=>!isS(h)&&(h.pref==="flex"||h.perWeek>=7))).concat(act.filter(h=>!isS(h)&&h.pref!=="flex"&&h.perWeek<7));
+  $("habSum").textContent="tap when done";
   $("todayHabits").innerHTML=list.length?list.map(h=>{const d=!!logged(h.id,t),c=weekCount(h.id,ws),ev=te.find(e=>e.habit===h.id);return`<button class="hchip ${d?"done":""}" style="--c:${h.color}" data-hlog="${esc(h.id)}">${d?'<span class="tick">✓</span>':""}${ring(c/h.perWeek,h.color,52,c+"/"+h.perWeek)}<span>${esc(h.name)}</span><span class="meta" style="font-size:11px">${ev?fmtT(ev.start):d?"Done":"Tap if done"}</span></button>`}).join(""):`<div class="empty" style="width:100%">Add activities in the Habits tab.</div>`;
-  $("todaySched").innerHTML=te.length?te.map(e=>{const past=evEnd(e)<=nm,c=e===cur;return`<li class="${past?"past":""} ${c?"cur":""}" data-e="${esc(e.id)}"><div class="t">${fmtT(e.start)}${e.end?`<small>to ${fmtT(e.end)}</small>`:""}</div><div><div class="ttl">${esc(e.title)}</div>${e.notes?`<div class="meta">${esc(e.notes)}</div>`:""}</div><span class="bar" style="background:${evColor(e)}"></span></li>`}).join(""):`<div class="empty">Nothing scheduled. Tap + to add, or let the Habits tab fit your activities in.</div>`;
+  {const rows=te.map(e=>({e,past:evEnd(e)<=nm,cur:e===cur}));const pastN=rows.filter(r=>r.past).length;let h="",lineDone=false;
+   if(pastN>=3&&!showPast)h+=`<li class="more" id="togglePast"><span><b>✓</b> ${pastN} earlier item${pastN>1?"s":""} done</span><span>Show</span></li>`;
+   else if(pastN>=3)h+=`<li class="more" id="togglePast"><span>Earlier today</span><span>Hide</span></li>`;
+   rows.forEach(r=>{const e=r.e;
+     if(r.past&&pastN>=3&&!showPast)return;
+     if(!r.past&&!lineDone&&!r.cur&&pastN){h+=`<li class="nowline">Now · ${fmtT(nm)}</li>`;lineDone=true}
+     if(r.cur)lineDone=true;
+     const pct=r.cur?Math.round((nm-toMin(e.start))/Math.max(1,evEnd(e)-toMin(e.start))*100):0;
+     h+=`<li class="${r.past?"past":""} ${r.cur?"cur":""}" data-e="${esc(e.id)}">${tCell(e)}<div><div class="ttl">${r.cur?'<span class="nowpill">NOW</span>':""}${esc(e.title)}</div>${e.notes?`<div class="meta">${esc(e.notes)}</div>`:""}${r.cur?`<div class="prog"><i style="width:${pct}%"></i></div><div class="meta">${evEnd(e)-nm} min left</div>`:""}</div><span class="bar" style="background:${evColor(e)}"></span></li>`});
+   if(te.length&&!lineDone&&pastN===te.length)h+=`<li class="nowline">Now · ${fmtT(nm)} · all done for today</li>`;
+   $("todaySched").innerHTML=te.length?h:`<div class="empty">Nothing scheduled. Tap + to add, or let the Habits tab fit your activities in.</div>`;}
   $("todayTasks").innerHTML=urg.length?urg.map(card).join(""):`<div class="empty">Nothing urgent. Nice.</div>`;
   const last=D.sleep.filter(r=>r.date<=t).sort((a,b)=>b.date.localeCompare(a.date))[0],tgt=Number(S().sleepTarget);
   if(last&&last.date===t){const hrs=sleepHours(last);$("sleepMini").innerHTML=`<h2>Last night <button class="btn sm" data-tab="sleep">Sleep log</button></h2><div class="row" style="gap:16px">${ring(hrs/tgt,hrs>=tgt?"var(--ok)":"var(--leave)",72,hrs.toFixed(1)+"h")}<div><div class="ttl">${fmtT(last.bed)} → ${fmtT(last.wake)}</div><div class="meta">${hrs>=tgt?"Target met":"Short of your "+tgt+"h target by "+(tgt-hrs).toFixed(1)+"h"}${last.quality?" · "+"★".repeat(last.quality):""}</div></div></div>`}
@@ -561,7 +589,7 @@ function renderCal(){
     $("calBody").innerHTML=`<div class="cal">${h}</div>`;
   }else{
     const ws=weekStart(calRef);$("calTitle").textContent=dayName(ws,{day:"numeric",month:"short"})+" – "+dayName(addD(ws,6),{day:"numeric",month:"short",year:"numeric"});
-    $("calBody").innerHTML=[...Array(7)].map((_,i)=>{const ds=addD(ws,i),inf=dayInfo(ds),ev=eventsOn(ds),o=inf.work?office(ds):null;return`<div class="wkday"><h4><span>${dayName(ds,{weekday:"long",day:"numeric",month:"short"})} ${ds===t?'<span class="pill" style="background:var(--red);color:#fff">Today</span>':""}</span><button class="btn sm" data-day="${ds}">Open</button></h4><div class="meta"><span class="pill"><i style="background:${inf.color}"></i>${esc(inf.label)}${o?" · "+fmtT(o.a)+"–"+fmtT(o.l):""}</span></div><ul class="sched">${ev.map(e=>`<li data-e="${esc(e.id)}"><div class="t" style="font-size:17px">${fmtT(e.start)}</div><div><div class="ttl">${esc(e.title)}</div>${e.end?`<div class="meta">to ${fmtT(e.end)}</div>`:""}</div><span class="bar" style="background:${evColor(e)}"></span></li>`).join("")}</ul></div>`}).join("");
+    $("calBody").innerHTML=[...Array(7)].map((_,i)=>{const ds=addD(ws,i),inf=dayInfo(ds),ev=eventsOn(ds),o=inf.work?office(ds):null;return`<div class="wkday"><h4><span>${dayName(ds,{weekday:"long",day:"numeric",month:"short"})} ${ds===t?'<span class="pill" style="background:var(--red);color:#fff">Today</span>':""}</span><button class="btn sm" data-day="${ds}">Open</button></h4><div class="meta"><span class="pill"><i style="background:${inf.color}"></i>${esc(inf.label)}${o?" · "+fmtT(o.a)+"–"+fmtT(o.l):""}</span></div><ul class="sched sm">${ev.map(e=>`<li class="${ds<t||(ds===t&&evEnd(e)<=nowMin())?"past":""}" data-e="${esc(e.id)}">${tCell(e)}<div><div class="ttl">${esc(e.title)}</div></div><span class="bar" style="background:${evColor(e)}"></span></li>`).join("")}</ul></div>`}).join("");
   }
   const ps=D.periods.slice().sort((a,b)=>b.start.localeCompare(a.start));
   $("periodList").innerHTML=ps.length?ps.map(p=>`<div class="tcard" data-p="${esc(p.id)}" style="cursor:pointer"><span style="font-size:22px">${p.kind==="leave"?"✈️":"⚓"}</span><div class="body"><div class="ttl">${p.kind==="leave"?"India leave":"Offshore"}: ${dayName(p.start)} – ${dayName(p.end)}</div><div class="meta">${Math.round((pd(p.end)-pd(p.start))/864e5)+1} days${p.notes?" · "+esc(p.notes):""}${p.kind==="offshore"?" · every day is a working day":""}</div></div></div>`).join(""):`<div class="meta">No trips added. Leave days are skipped when fitting habits; offshore makes every day a working day.</div>`;
@@ -570,7 +598,7 @@ function renderHabits(){
   const t=today(),ws=weekStart(t),days=[...Array(7)].map((_,i)=>addD(ws,i)),act=D.habits.filter(h=>h.active);
   const tot=act.reduce((a,h)=>a+Math.min(weekCount(h.id,ws),h.perWeek),0),goal=act.reduce((a,h)=>a+h.perWeek,0);
   $("wkHab").textContent=goal?`${tot} of ${goal} sessions done`:"";
-  $("habGrid").innerHTML=D.habits.map(h=>{const c=weekCount(h.id,ws);return`<div class="hcard" style="--c:${h.color};${h.active?"":"opacity:.55"}"><div data-h="${esc(h.id)}" style="display:flex;flex-direction:column;align-items:center;gap:4px">${ring(c/h.perWeek,h.color,78,c+"/"+h.perWeek)}<div class="ttl">${esc(h.name)}</div><div class="meta">${h.perWeek}×/wk · ${h.duration} min · ${h.pref}${h.active?"":" · off"}</div></div><div class="week7">${days.map(ds=>{const on=!!logged(h.id,ds),pl=D.events.some(e=>e.habit===h.id&&e.date===ds);return`<button class="${on?"on":""} ${pl&&!on?"plan":""}" data-hlog="${esc(h.id)}" data-ds="${ds}" aria-label="${dayName(ds)} ${on?"done":"not done"}">${"SMTWTFS"[pd(ds).getDay()]}</button>`}).join("")}</div></div>`}).join("")||`<div class="empty">No activities yet.</div>`;
+  $("habGrid").innerHTML=D.habits.map(h=>{const c=weekCount(h.id,ws);return`<div class="hcard" style="--c:${h.color};${h.active?"":"opacity:.55"}"><div data-h="${esc(h.id)}" style="display:flex;flex-direction:column;align-items:center;gap:4px">${ring(c/h.perWeek,h.color,78,c+"/"+h.perWeek)}<div class="ttl">${esc(h.name)}</div><div class="meta">${h.perWeek>=7?"Daily":h.perWeek+"×/wk"}${h.pref==="flex"?" · tick off":" · "+h.duration+" min · "+h.pref}${h.active?"":" · off"}</div></div><div class="week7">${days.map(ds=>{const on=!!logged(h.id,ds),pl=D.events.some(e=>e.habit===h.id&&e.date===ds);return`<button class="${on?"on":""} ${pl&&!on?"plan":""}" data-hlog="${esc(h.id)}" data-ds="${ds}" aria-label="${dayName(ds)} ${on?"done":"not done"}">${"SMTWTFS"[pd(ds).getDay()]}</button>`}).join("")}</div></div>`}).join("")||`<div class="empty">No activities yet.</div>`;
   renderPlan();
 }
 function renderPlan(){
@@ -646,7 +674,7 @@ $("pDel").addEventListener("click",e=>editP&&del("Periods",editP.id,"ovP",e.curr
 
 // Day detail
 function openDay(ds){const inf=dayInfo(ds),ev=eventsOn(ds),o=inf.work?office(ds):null,due=D.tasks.filter(x=>!x.done&&x.due&&x.due.slice(0,10)===ds);
-  $("dayBox").innerHTML=`<h2>${dayName(ds,{weekday:"long",day:"numeric",month:"long"})}</h2><span class="pill"><i style="background:${inf.color}"></i>${esc(inf.label)}</span>${o?`<div class="row" style="margin-top:12px"><span class="ttl">Office ${fmtT(o.a)} – ${fmtT(o.l)}</span><span class="meta">Start</span><input type="time" id="dayArr" value="${fromMin(o.a)}" style="width:130px" data-ds="${ds}"></div>`:""}<ul class="sched" style="margin-top:10px">${ev.map(e=>`<li data-e="${esc(e.id)}"><div class="t" style="font-size:17px">${fmtT(e.start)}</div><div><div class="ttl">${esc(e.title)}</div>${e.end?`<div class="meta">to ${fmtT(e.end)}</div>`:""}</div><span class="bar" style="background:${evColor(e)}"></span></li>`).join("")||'<li style="cursor:default"><div></div><div class="meta">Nothing scheduled</div></li>'}</ul>${due.length?`<h2 style="font-size:16px;margin-top:12px">Tasks due</h2>${due.map(card).join("")}`:""}<div class="row" style="margin-top:14px;justify-content:space-between"><button class="btn p" data-addev="${ds}">+ Schedule item</button><button class="btn" data-close>Close</button></div>`;open("ovD")}
+  $("dayBox").innerHTML=`<h2>${dayName(ds,{weekday:"long",day:"numeric",month:"long"})}</h2><span class="pill"><i style="background:${inf.color}"></i>${esc(inf.label)}</span>${o?`<div class="row" style="margin-top:12px"><span class="ttl">Office ${fmtT(o.a)} – ${fmtT(o.l)}</span><span class="meta">Start</span><input type="time" id="dayArr" value="${fromMin(o.a)}" style="width:130px" data-ds="${ds}"></div>`:""}<ul class="sched sm" style="margin-top:10px">${ev.map(e=>`<li class="${ds<today()||(ds===today()&&evEnd(e)<=nowMin())?"past":""}" data-e="${esc(e.id)}">${tCell(e)}<div><div class="ttl">${esc(e.title)}</div>${e.notes?`<div class="meta">${esc(e.notes)}</div>`:""}</div><span class="bar" style="background:${evColor(e)}"></span></li>`).join("")||'<li style="cursor:default"><div></div><div class="meta">Nothing scheduled</div></li>'}</ul>${due.length?`<h2 style="font-size:16px;margin-top:12px">Tasks due</h2>${due.map(card).join("")}`:""}<div class="row" style="margin-top:14px;justify-content:space-between"><button class="btn p" data-addev="${ds}">+ Schedule item</button><button class="btn" data-close>Close</button></div>`;open("ovD")}
 async function setArrive(ds,v){if(!v)return;const ex=D.days.find(x=>x.date===ds);api("saveRow","Days",{id:ex?ex.id:ds,date:ds,arrive:v})}
 
 // Settings
@@ -785,6 +813,7 @@ document.addEventListener("click",async e=>{
   const a=e.target.closest("[data-act]");
   if(a){const k=a.dataset.act;close("ovMenu");if(k==="task")openT();else if(k==="event")openE();else if(k==="habit")openH();else if(k==="sleep")openS();else if(k==="period")openP(null,a.dataset.kind);else if(k==="plan")open("ovPlan");else if(k==="voice"){open("ovPlan");startMic()}return}
   if(e.target.id==="connNow"){openConn();return}
+  if(e.target.closest("#togglePast")){showPast=!showPast;render();return}
   const tb=e.target.closest("[data-tab]");if(tb){showTab(tb.dataset.tab);return}
   const hl=e.target.closest("[data-hlog]");if(hl){toggleLog(hl.dataset.hlog,hl.dataset.ds||today());return}
   const pi=e.target.closest("[data-pi]");if(pi){const p=placements[Number(pi.dataset.pi)];p.on=!p.on;renderPlan();return}
